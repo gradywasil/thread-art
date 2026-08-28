@@ -49,3 +49,9 @@ User tries the delivered app (from project root: python3 -m http.server → http
 
 
 
+
+## Deployment record (post-run)
+- 2026-08-28 repo github.com/Arrangedgodly/thread-art public; Pages via Actions workflow (.github/workflows/deploy.yml), runs green on every push
+- 2026-08-28 FL-1 likeness fix deployed (commit 16c3635)
+- 2026-08-28 live at https://thread.arrangedgodly.com/ — Cloudflare-proxied (orange cloud); HTTPS enforced at Cloudflare edge (http→301→https, valid *.arrangedgodly.com edge cert); GitHub "Enforce HTTPS" checkbox unavailable-by-design behind proxy — accepted as working architecture; alternate purist path documented (grey-cloud → GitHub cert → enforce → optional re-proxy)
+- 2026-08-28 apex collision documented: arrangedgodly.com bound to GH user-site repo redirects all github.io project URLs to the apex, which serves the personal SPA — thread.* subdomain sidesteps it
