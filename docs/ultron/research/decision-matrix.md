@@ -1,0 +1,11 @@
+# Decision Matrix — ultron-supreme research dispositions
+
+Note: the research-queue extraction step was satisfied in-thread by the coordinator authoring the
+queue (RQ1–RQ4) directly at plan time, so no separate reader dispatch was needed.
+
+| ID | Question | Disposition | Approval state | Evidence path | Affected tasks | Confidence | Date |
+|----|----------|-------------|----------------|---------------|----------------|------------|------|
+| RQ1 | Compute architecture for TTFT < 2 s and jank-free weaving at 300 pins / ~600 px / ~4,000 passes | COMMITTED: precompute-all chord tables in a module Web Worker, streamed transferable pass-record batches (~64 then 128–256), setTimeout-chunked main-thread fallback; no SharedArrayBuffer, no requestIdleCallback | auto-approved (ultron-supreme) | research/rq1-compute-architecture.md + research/spikes/rq1-bench.js (529 ms total, 104 ms TTFT, 59 MB, determinism hash stable) | T3, T4, T8 | High on ordering/determinism; medium on browser absolute timings — re-measure in T8 | 2026-08-27 |
+| RQ2 | Default parameters for recognizable portraits (pins, passes, lightening delta, skip rules, stopping) | COMMITTED: pins 300 (200–500); passes 4000 (1000–8000); lighteningDelta 20/255 (4–32); neighborSkip round(n/30) (0–25); minImprovement 0; stopping = pass budget AND 3-consecutive-no-improvement; speed 0.5×–16× display-only | auto-approved (ultron-supreme) | research/rq2-algorithm-defaults.md | T3, T4, T5, T8 | High / moderate-high | 2026-08-27 |
+| RQ3 | Physical mapping for an honest feet counter (board diameter, thread spec, total lengths) | COMMITTED: 24 in board; feet = Σ chord_px × (0.6096 / virtual_diameter_px) × 3.28084 (≈5,093 ft / 1,552 m at 4,000 passes); black 100% polyester ~0.3 mm; feet primary, meters secondary; txt header states assumptions | auto-approved (ultron-supreme) | research/rq3-physical-mapping.md | T5, T7 | High | 2026-08-27 |
+| RQ4 | When/how to apply greyscale contrast normalization for weak images without harming good ones | COMMITTED: conditional 2nd→98th percentile linear stretch over in-circle pixels only; skip if p98−p2 ≥ 200 (bit-exact passthrough) or < 24 (flat/noise guard); else LUT-stretch to 0–255; deterministic, dependency-free | auto-approved (ultron-supreme) | research/rq4-contrast-normalization.md | T2, T3, T8 | High / medium thresholds pending T8 | 2026-08-27 |

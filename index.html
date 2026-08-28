@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Watch a single black thread weave your portrait into art, pin by pin — entirely inside your browser.">
+  <meta name="theme-color" content="#12100d">
+  <title>Thread Art — a portrait woven from one thread</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='25' fill='none' stroke='%23c9a25f' stroke-width='3'/%3E%3Cline x1='17' y1='45' x2='47' y2='22' stroke='%238a744d' stroke-width='3'/%3E%3Cline x1='40' y1='54' x2='14' y2='20' stroke='%238a744d' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <script>
+    /* Boot decider (a classic script on purpose — it must also run on file://
+     * pages, where evergreen browsers refuse to load ES modules). On any
+     * http(s) static server the app itself is loaded as an ES module from
+     * ./src/main.js. On file:// we never attempt the module load (that would
+     * log a CORS error) and instead reveal an in-page notice. */
+    (function () {
+      if (location.protocol === "file:") {
+        document.documentElement.classList.add("file-mode");
+      } else {
+        var moduleScript = document.createElement("script");
+        moduleScript.type = "module";
+        moduleScript.src = "./src/main.js";
+        document.head.appendChild(moduleScript);
+      }
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <p class="site-brand">Thread Art</p>
+    <p class="site-tagline">a portrait, woven from a single thread</p>
+  </header>
+
+  <main class="stage" id="stage">
+    <!-- State: landing + upload (T1) -->
+    <section class="stage-panel" id="stage-upload" aria-labelledby="upload-heading">
+      <h1 class="stage-title" id="upload-heading">Start with a portrait</h1>
+      <p class="stage-lede">Drop in a photo. A single black thread will weave it into art, pin by pin.</p>
+
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone-inner">
+          <svg class="drop-zone-art" aria-hidden="true" viewBox="0 0 96 96" width="88" height="88">
+            <!-- The loom in miniature: a pin ring (24 pin dots via a round-dash
+                 trick) with a few gold chords already laid across it. -->
+            <circle cx="48" cy="48" r="40" fill="none" stroke="currentColor" stroke-width="1" opacity="0.45"/>
+            <circle cx="48" cy="48" r="40" fill="none" stroke="currentColor" stroke-width="2.4"
+                    stroke-linecap="round" stroke-dasharray="0.1 10.372" opacity="0.85"/>
+            <line class="art-thread" x1="88" y1="48" x2="28" y2="82.6"/>
+            <line class="art-thread" x1="82.6" y1="68" x2="28" y2="13.4"/>
+            <line class="art-thread" x1="58.4" y1="86.6" x2="58.4" y2="9.4"/>
+            <line class="art-thread" x1="9.4" y1="58.4" x2="76.3" y2="19.7"/>
+            <line class="art-thread" x1="9.4" y1="37.6" x2="82.6" y2="28"/>
+          </svg>
+          <p class="drop-zone-label server-only" id="drop-zone-label">Drag an image here</p>
+          <p class="drop-zone-hint server-only">JPG, PNG or WebP — or paste from the clipboard</p>
+          <button type="button" class="drop-zone-button server-only" id="pick-button">Choose an image</button>
+          <input type="file" id="file-input" class="visually-hidden" tabindex="-1" aria-hidden="true"
+                 accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp">
+          <noscript>
+            <p class="noscript-note">Thread Art needs JavaScript. Everything runs locally in this tab — nothing is uploaded.</p>
+          </noscript>
+          <p class="file-notice" id="file-notice">
+            You opened this page straight from disk. Browsers switch off app scripts on
+            <code>file://</code> pages, so the weaver can’t run here. From this folder, run
+            <code>python3&nbsp;-m&nbsp;http.server</code> and reopen
+            <code>http://localhost:8000</code> — it still runs entirely on your machine.
+          </p>
+        </div>
+      </div>
+
+      <p class="privacy-note">Your image never leaves your machine. Everything happens inside this browser tab — nothing is uploaded, ever.</p>
+    </section>
+
+    <!-- State: crop — the working image with the draggable circle (T2) and
+         the pre-start weave knobs (T6; ranges committed in RQ2: pins
+         200–500, coverage 1000–8000, darkness 4–32, gap 0–25 / auto).
+         Heading structure (T10): every stage leads with its own h1 — the
+         stages replace one another and hidden stages are display:none (out
+         of the accessibility tree), so exactly one h1 is ever exposed and
+         it names the screen the user is actually on. -->
+    <section class="stage-panel" id="stage-crop" aria-labelledby="crop-heading" hidden>
+      <h1 class="stage-title" id="crop-heading">Position the crop</h1>
+      <p class="stage-lede">Drag the circle over the part of the photo the thread should weave — mouse, pen or touch.</p>
+
+      <div class="crop-frame" id="crop-frame">
+        <canvas id="crop-canvas" class="crop-canvas" width="1" height="1" role="img"
+                aria-label="Uploaded photo with a circular crop region"></canvas>
+        <div class="crop-circle" id="crop-circle" tabindex="0" role="group"
+             aria-label="Crop circle — drag it with mouse or touch, or press the arrow keys to nudge it"></div>
+      </div>
+
+      <p class="crop-meta" id="crop-meta"></p>
+
+      <!-- T11 (mobile grace): the action row sits ABOVE the settings card so
+           Start is reachable without scrolling past every knob on a phone.
+           The wide ≥62rem crop screen is unaffected — its grid places
+           .crop-actions explicitly in the settings column below the knobs. -->
+      <div class="crop-actions">
+        <button type="button" class="button-primary" id="start-button">Start the weave</button>
+        <button type="button" class="drop-zone-button" id="crop-replace">Choose a different image</button>
+      </div>
+
+      <div class="knobs" id="knobs">
+        <h2 class="knobs-title">Weave settings</h2>
+
+        <div class="knob">
+          <div class="knob-head">
+            <label class="knob-label" for="knob-pins">Pins</label>
+            <output class="knob-value" id="knob-pins-value" for="knob-pins">300</output>
+          </div>
+          <input class="knob-range" type="range" id="knob-pins"
+                 min="200" max="500" step="10" value="300"
+                 aria-describedby="knob-pins-hint">
+          <p class="knob-hint" id="knob-pins-hint">pins around the ring — beyond ~400 the gain is mostly invisible</p>
+        </div>
+
+        <div class="knob">
+          <div class="knob-head">
+            <label class="knob-label" for="knob-passes">Coverage</label>
+            <output class="knob-value" id="knob-passes-value" for="knob-passes">4,000 threads</output>
+          </div>
+          <input class="knob-range" type="range" id="knob-passes"
+                 min="1000" max="8000" step="100" value="4000"
+                 aria-describedby="knob-passes-hint">
+          <p class="knob-hint" id="knob-passes-hint">how many thread passes the weave lays down</p>
+        </div>
+
+        <div class="knob">
+          <div class="knob-head">
+            <label class="knob-label" for="knob-delta">Darkness</label>
+            <output class="knob-value" id="knob-delta-value" for="knob-delta">20 / 255</output>
+          </div>
+          <input class="knob-range" type="range" id="knob-delta"
+                 min="4" max="32" step="1" value="20"
+                 aria-describedby="knob-delta-hint">
+          <p class="knob-hint" id="knob-delta-hint">how much each pass darkens — 20 is the calibrated default</p>
+        </div>
+
+        <details class="knob-advanced" id="knob-advanced">
+          <summary>Advanced</summary>
+          <div class="knob">
+            <div class="knob-head">
+              <label class="knob-label" for="knob-gap">Min chord gap</label>
+              <output class="knob-value" id="knob-gap-value" for="knob-gap">auto · 10 pins</output>
+            </div>
+            <div class="knob-gap-row">
+              <input class="knob-range" type="range" id="knob-gap"
+                     min="0" max="25" step="1" value="10" disabled
+                     aria-describedby="knob-gap-hint">
+              <label class="knob-auto"><input type="checkbox" id="knob-gap-auto" checked> Auto</label>
+            </div>
+            <p class="knob-hint" id="knob-gap-hint">skips the k nearest pins in both directions (auto = pin count ÷ 30)</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- State: weaving — the animated thread renderer (T4) with the live
+         counters (T5): feet-of-thread (rq3 physical mapping, applied at
+         display time), passes drawn, and subtle progress. -->
+    <section class="stage-panel" id="stage-weave" aria-labelledby="weave-heading" hidden>
+      <h1 class="stage-title" id="weave-heading" tabindex="-1">Weaving</h1>
+      <canvas id="loom-canvas" class="loom-canvas" width="600" height="600" role="img"
+              aria-label="Thread art canvas — a single black thread weaving the portrait, pin by pin"></canvas>
+
+      <div class="weave-controls">
+        <button type="button" class="weave-button" id="weave-pause" aria-pressed="false">Pause</button>
+        <div class="speed-group" id="weave-speeds" role="group" aria-label="Weave speed multiplier"></div>
+        <button type="button" class="weave-button" id="weave-restart">Start over</button>
+      </div>
+
+      <div class="weave-counters" id="weave-counters">
+        <!-- T9: the polite live region carries ONLY this visually-hidden node,
+             written on phase changes and 25% milestones — the visible counters
+             below tick at ~10 Hz but are outside the region so screen readers
+             are never spammed with per-second updates. -->
+        <div class="counter-live" aria-live="polite">
+          <span class="visually-hidden" id="counter-announcement"></span>
+        </div>
+        <p class="counter-feet">
+          <span class="counter-value" id="counter-feet-value">0</span>
+          <span class="counter-unit">ft of thread</span>
+        </p>
+        <p class="counter-passes">
+          <span class="counter-value" id="counter-passes-value">0 / 4,000</span>
+          <span class="counter-unit">threads</span>
+        </p>
+        <div class="progress-track" id="progress-track" role="progressbar"
+             aria-label="Threads woven" aria-valuemin="0" aria-valuemax="4000" aria-valuenow="0">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="weave-status" id="weave-status">Preparing the loom…</p>
+        <p class="counter-note">measured pin-to-pin · assumes a 24 in (61 cm) board</p>
+      </div>
+    </section>
+
+    <!-- State: complete (T6) — the finished portrait, stats summary, the
+         view-original toggle (a simple toggle, NOT a compare slider), and
+         the restart actions. Downloads (T7): the woven canvas as PNG + the
+         pin-by-pin winding order as plain text, both generated locally. -->
+    <section class="stage-panel" id="stage-complete" aria-labelledby="complete-heading" hidden>
+      <h1 class="stage-title" id="complete-heading" tabindex="-1">Woven</h1>
+
+      <figure class="complete-figure">
+        <canvas id="complete-canvas" class="complete-canvas" role="img"
+                aria-label="Finished thread-art portrait"></canvas>
+        <canvas id="original-canvas" class="complete-canvas" hidden role="img"
+                aria-label="The original photo, as uploaded"></canvas>
+        <figcaption class="complete-caption" id="complete-caption">Woven from a single thread</figcaption>
+      </figure>
+
+      <div class="complete-actions">
+        <button type="button" class="weave-button" id="complete-toggle" aria-pressed="false">View original</button>
+        <button type="button" class="weave-button" id="download-png">Download PNG</button>
+        <button type="button" class="weave-button" id="download-seq">Download pin sequence (.txt)</button>
+      </div>
+
+      <div class="complete-stats">
+        <p class="complete-length">
+          <span class="counter-value" id="complete-length">0</span>
+          <span class="counter-unit">of thread</span>
+        </p>
+        <p class="complete-detail" id="complete-detail"></p>
+        <p class="counter-note" id="complete-note"></p>
+      </div>
+
+      <div class="crop-actions">
+        <button type="button" class="button-primary" id="complete-reweave">Weave again with new settings</button>
+        <button type="button" class="drop-zone-button" id="complete-restart">Start over with a new image</button>
+      </div>
+    </section>
+
+    <!-- Error region (T1): outside the stage panels so any journey stage can
+         surface a visible error (upload validation, weave failures). -->
+    <div class="error-region" id="error-region" role="alert" hidden>
+      <p class="error-title" id="error-title">That file can’t be used</p>
+      <p class="error-message" id="error-message"></p>
+      <button type="button" class="error-dismiss" id="error-dismiss">Try another image</button>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Made of one thread, a ring of pins, and no server.</p>
+  </footer>
+</body>
+</html>

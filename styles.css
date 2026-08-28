@@ -1,0 +1,1113 @@
+/* Thread Art — showpiece visual system (T10; built on the T1 dark-gallery
+ * skeleton, the T2 gold-ring identity and the T9 contrast tokens).
+ *
+ * Identity: a dark gallery room. Warm paper discs (the loom) sit inside thin
+ * gold rings; a serif display face carries titles and the hero numbers; the
+ * system sans carries UI copy; tabular figures keep every counter honest.
+ * System font stacks only — NO runtime network fonts (zero-network page).
+ *
+ * Contrast invariants (T9 audit — do not regress): every text token is
+ * ≥ 4.5:1 on both --bg and the header-gradient peak #1d1812:
+ *   --ink #ece6d9 · --ink-dim #a89f8e · --ink-faint #8a8272 (4.99 / 4.63)
+ *   --accent-ink #e5c98f (11.11) · gold-on-bg #c9a25f (≈8.06)
+ *   btn text on gold #241c10 (7.06) · danger title on --danger-bg (6.04)
+ * Decorative motion is small and short; the prefers-reduced-motion block at
+ * the bottom disables all of it (T9 criterion 11).
+ */
+
+:root {
+  --bg: #12100d;
+  --bg-raised: #1a1712;
+  --bg-sunken: #0c0b09;
+  --ink: #ece6d9;
+  --ink-dim: #a89f8e;
+  /* Faint ink is real text (hints, captions, notes) — kept at ≥4.5:1 on both
+   * --bg and the lighter header-gradient peak (T9 contrast audit). */
+  --ink-faint: #8a8272;
+  --hairline: #2c2822;
+  --hairline-strong: #453e32;
+  --accent: #c9a25f;
+  --accent-ink: #e5c98f;
+  --accent-glow: rgba(201, 162, 95, 0.16);
+  --on-accent: #241c10;
+  --danger: #cf8572;
+  --danger-border: #4b2e26;
+  --danger-bg: #221713;
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --ease: cubic-bezier(0.25, 0.6, 0.3, 1);
+  --t-fast: 130ms;
+  --t-med: 180ms;
+  --radius-panel: 14px;
+  --radius-pill: 999px;
+
+  /* The gallery "plinth" ring shared by the loom and the finished piece:
+   * hairline ring, soft ambient drop, faint gold halo. */
+  --loom-ring:
+    0 0 0 1px var(--hairline),
+    0 0 34px var(--accent-glow),
+    0 26px 60px -22px rgba(0, 0, 0, 0.72);
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html { color-scheme: dark; }
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background:
+    radial-gradient(1100px 700px at 50% -10%, #1d1812 0%, transparent 60%),
+    var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(201, 162, 95, 0.38);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------- header */
+
+.site-header {
+  padding: clamp(1.4rem, 3vw, 2.4rem) 1.25rem 0;
+  text-align: center;
+}
+
+.site-brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+  letter-spacing: 0.42em;
+  text-indent: 0.42em; /* optically re-centers the tracked wordmark */
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.site-brand::after {
+  /* small gold lozenge under the wordmark — the thread's anchor point */
+  content: "";
+  display: block;
+  width: 5px; height: 5px;
+  margin: 0.7rem auto 0;
+  transform: rotate(45deg);
+  background: var(--accent);
+  opacity: 0.85;
+}
+
+.site-tagline {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--ink-faint);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+
+/* ----------------------------------------------------------------- stage */
+
+.stage {
+  display: grid;
+  place-items: center;
+  padding: clamp(1.5rem, 4vw, 3.25rem) 1.25rem;
+}
+
+.stage-panel {
+  width: min(44rem, 100%);
+  text-align: center;
+}
+
+/* Every stage leads with an h1 (T10 heading fix): a hairline-and-glint
+ * ornament above the title gives all six states one shared gallery rhythm. */
+.stage-title {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.75rem, 4.5vw, 2.5rem);
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+}
+
+.stage-title::before {
+  content: "";
+  display: block;
+  width: 52px;
+  height: 1px;
+  margin: 0 auto 1.15rem;
+  background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
+  opacity: 0.8;
+}
+
+.stage-lede {
+  margin: 0 auto 1.9rem;
+  max-width: 34rem;
+  color: var(--ink-dim);
+  font-size: 1.02rem;
+}
+
+/* ------------------------------------------------------------- drop zone */
+
+.drop-zone {
+  position: relative;
+  width: min(24rem, 82vw);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: 50%; /* the loom itself is the drop target */
+  background: radial-gradient(closest-side, #1b1712 0%, #14110d 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 24px 50px -30px rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+  transition: border-color var(--t-med) var(--ease), box-shadow var(--t-med) var(--ease);
+}
+
+/* an inner reference ring — echoes the rim of pins on the real loom */
+.drop-zone::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  pointer-events: none;
+  transition: border-color var(--t-med) var(--ease);
+}
+
+.drop-zone-inner {
+  padding: 1.5rem;
+  max-width: 100%;
+}
+
+.drop-zone-art {
+  display: block;
+  margin: 0 auto 0.9rem;
+  color: var(--ink-faint);
+  transition: color var(--t-med) var(--ease);
+}
+
+.drop-zone-art .art-thread {
+  stroke: var(--accent);
+  stroke-width: 1;
+  opacity: 0.75;
+  transition: opacity var(--t-med) var(--ease);
+}
+
+.drop-zone-label {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.drop-zone-hint {
+  margin: 0.3rem 0 1.15rem;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 162, 95, 0.18),
+    0 0 0 1px rgba(201, 162, 95, 0.25),
+    0 26px 56px -30px rgba(0, 0, 0, 0.8);
+}
+
+.drop-zone:hover::before,
+.drop-zone:focus-visible::before,
+.drop-zone.drag-over::before {
+  border-color: var(--hairline-strong);
+}
+
+.drop-zone:hover .drop-zone-art,
+.drop-zone:focus-visible .drop-zone-art,
+.drop-zone.drag-over .drop-zone-art {
+  color: var(--accent-ink);
+}
+
+.drop-zone:hover .art-thread,
+.drop-zone:focus-visible .art-thread,
+.drop-zone.drag-over .art-thread {
+  opacity: 1;
+}
+
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  border-style: solid;
+  box-shadow: 0 0 0 1px var(--accent), 0 0 46px rgba(201, 162, 95, 0.14);
+}
+
+/* While the file is decoding, the miniature loom turns — the only spinner
+ * in the app. Killed under prefers-reduced-motion (bottom of the file). */
+.drop-zone.is-busy { cursor: progress; }
+.drop-zone.is-busy .drop-zone-art {
+  animation: art-turn 2.8s linear infinite;
+}
+
+@keyframes art-turn {
+  to { transform: rotate(360deg); }
+}
+
+/* --------------------------------------------------------------- buttons */
+
+/* One ghost-pill style for every secondary action (T10 unification). */
+.drop-zone-button,
+.weave-button,
+.error-dismiss {
+  appearance: none;
+  background: transparent;
+  color: var(--accent-ink);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.55rem 1.3rem;
+  font: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease);
+}
+
+.drop-zone-button:hover,
+.weave-button:hover,
+.error-dismiss:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(201, 162, 95, 0.06);
+}
+
+.drop-zone-button:disabled,
+.weave-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+  background: transparent;
+}
+
+/* The single decisive action of a stage gets the gold. */
+.button-primary {
+  appearance: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  padding: 0.65rem 1.75rem;
+  font: inherit;
+  font-size: 0.98rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow: 0 10px 26px -14px rgba(201, 162, 95, 0.55);
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease);
+}
+
+.button-primary:hover {
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+  box-shadow: 0 12px 30px -14px rgba(229, 201, 143, 0.6);
+}
+
+.button-primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* --------------------------------------------------------- privacy note */
+
+.privacy-note {
+  margin: 1.8rem auto 0;
+  max-width: 30rem;
+  color: var(--ink-dim);
+  font-size: 0.88rem;
+}
+
+/* A quiet lock-stone between the drop zone and the promise. */
+.privacy-note::before {
+  content: "";
+  display: block;
+  width: 30px; height: 1px;
+  margin: 0 auto 0.9rem;
+  background: var(--hairline-strong);
+}
+
+/* ----------------------------------------------------------- error state */
+
+.error-region {
+  margin: 1.5rem auto 0;
+  max-width: 30rem;
+  text-align: left;
+  border: 1px solid var(--danger-border);
+  border-left: 3px solid var(--danger);
+  border-radius: 10px;
+  background: var(--danger-bg);
+  padding: 0.95rem 1.1rem;
+  box-shadow: 0 18px 40px -26px rgba(0, 0, 0, 0.8);
+}
+
+.error-title {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display);
+  color: var(--danger);
+  font-size: 1.05rem;
+}
+
+.error-message {
+  margin: 0 0 0.75rem;
+  color: var(--ink-dim);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.error-dismiss {
+  padding: 0.35rem 1rem;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.error-dismiss:hover {
+  color: var(--accent-ink);
+}
+
+/* ---------------------------------------------------------- crop state */
+
+.crop-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: 0 auto;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 12px;
+  overflow: hidden; /* clips the dimming box-shadow to the photo */
+  box-shadow: 0 22px 50px -30px rgba(0, 0, 0, 0.85);
+  touch-action: none; /* touch drags move the circle, never the page */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.crop-canvas {
+  display: block;
+  max-width: min(34rem, 82vw);
+  max-height: min(34rem, 62svh);
+  width: auto;
+  height: auto;
+  background: var(--bg-sunken);
+  cursor: grab;
+}
+
+/* The gold ring (T2 identity): solid gold rim + halo, drawn OVER the dim. */
+.crop-circle {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  /* everything outside the circle is dimmed; the huge spread is clipped
+   * by .crop-frame's overflow:hidden. The gold ring + glow shadows are
+   * listed FIRST so they paint above the dim. */
+  box-shadow:
+    0 0 0 1px rgba(201, 162, 95, 0.38),
+    0 0 26px rgba(201, 162, 95, 0.2),
+    0 0 0 9999px rgba(10, 9, 7, 0.72);
+  cursor: grab;
+  transition: box-shadow var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+
+/* a faint inner dashed reference ring — marks the sampled disc */
+.crop-circle::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1px dashed rgba(201, 162, 95, 0.42);
+  pointer-events: none;
+}
+
+/* Keyboard focus keeps the global gold outline (T9-verified) AND the rim
+ * brightens with a glow ring that can never be clipped by the frame. */
+.crop-circle:focus-visible {
+  border-color: var(--accent-ink);
+  box-shadow:
+    0 0 0 2px rgba(229, 201, 143, 0.55),
+    0 0 30px rgba(229, 201, 143, 0.3),
+    0 0 0 9999px rgba(10, 9, 7, 0.72);
+}
+
+.crop-circle.is-dragging {
+  border-width: 3px;
+  box-shadow:
+    0 0 0 1px rgba(229, 201, 143, 0.5),
+    0 0 34px rgba(201, 162, 95, 0.32),
+    0 0 0 9999px rgba(10, 9, 7, 0.72);
+}
+
+.crop-frame.is-dragging .crop-canvas,
+.crop-frame.is-dragging .crop-circle {
+  cursor: grabbing;
+}
+
+.crop-meta {
+  margin: 1.1rem 0 0;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.crop-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Pre-start weave knobs (T6): three RQ2 range knobs + a collapsed advanced
+ * gap control, presented as one calm settings card (T10). */
+.knobs {
+  margin: 1.9rem auto 0;
+  width: min(26rem, 100%);
+  text-align: left;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-panel);
+  background: linear-gradient(180deg, rgba(26, 23, 18, 0.85), rgba(16, 14, 11, 0.85));
+  padding: 1.35rem 1.5rem 1.5rem;
+}
+
+.knobs-title {
+  margin: 0 0 1rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--ink-dim);
+}
+
+.knob + .knob {
+  margin-top: 1.2rem;
+}
+
+.knob-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.knob-label {
+  color: var(--ink-dim);
+  font-size: 0.92rem;
+}
+
+.knob-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-ink);
+  font-size: 0.92rem;
+}
+
+/* Custom range styling (T10): hairline track with a gold filled portion
+ * (the --fill % is maintained by knobs.js from the input's own value),
+ * gold thumb. -webkit gets the gradient track; Firefox uses its native
+ * range-progress. */
+.knob-range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 22px;
+  margin: 0.5rem 0 0.15rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.knob-range:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.knob-range::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--fill, 50%),
+    var(--hairline-strong) var(--fill, 50%)
+  );
+}
+
+.knob-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #2a2318;
+  box-shadow: 0 0 0 1px rgba(201, 162, 95, 0.55), 0 0 10px rgba(201, 162, 95, 0.25);
+}
+
+.knob-range::-moz-range-track {
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--hairline-strong);
+}
+
+.knob-range::-moz-range-progress {
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+
+.knob-range::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #2a2318;
+  box-shadow: 0 0 0 1px rgba(201, 162, 95, 0.55), 0 0 10px rgba(201, 162, 95, 0.25);
+}
+
+.knob-range:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-pill);
+}
+
+.knob-hint {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.knob-advanced {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--hairline);
+  padding-top: 0.9rem;
+}
+
+.knob-advanced summary {
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  list-style-position: inside;
+  transition: color var(--t-fast) var(--ease);
+}
+
+.knob-advanced summary:hover {
+  color: var(--accent-ink);
+}
+
+.knob-advanced[open] summary {
+  margin-bottom: 0.6rem;
+}
+
+.knob-advanced .knob {
+  margin-top: 0.8rem;
+}
+
+.knob-gap-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.knob-gap-row .knob-range {
+  flex: 1;
+}
+
+.knob-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  color: var(--ink-dim);
+  font-size: 0.82rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Wide-viewport crop stage (T10): photo + settings side by side, so the
+ * whole decision — position and tuning — is one composed screen. Explicit
+ * grid placement (auto-flow would interleave meta/knobs across columns). */
+@media (min-width: 62rem) {
+  #stage-crop {
+    width: min(64rem, 100%);
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(17rem, 0.8fr);
+    gap: 0 3rem;
+    align-items: start;
+    text-align: left;
+  }
+
+  #crop-heading,
+  #stage-crop .stage-lede {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  #stage-crop .stage-lede {
+    grid-row: 2;
+    margin-left: 0;
+    margin-bottom: 1.6rem;
+  }
+
+  #stage-crop .stage-title::before {
+    margin-left: 0;
+    margin-right: auto;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .crop-frame {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: center;
+    width: fit-content; /* shrinkwrap the photo — the grid column is wider */
+  }
+
+  .crop-meta {
+    grid-column: 1;
+    grid-row: 4;
+    text-align: center;
+  }
+
+  .knobs {
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 0.35rem;
+    width: 100%;
+  }
+
+  .crop-actions {
+    grid-column: 2;
+    grid-row: 4;
+    margin-top: 1.25rem;
+    justify-content: flex-start;
+  }
+
+  .crop-canvas {
+    /* definite cap (no percentage): lets the frame shrinkwrap correctly —
+     * a percentage max-width is unresolvable during the frame's intrinsic
+     * sizing and the canvas would contribute its full 600px width */
+    max-width: 32rem;
+    max-height: 56svh; /* keep the composed screen inside a normal viewport */
+  }
+}
+
+/* ------------------------------------------------------ complete state */
+
+.complete-figure {
+  margin: 0 auto;
+  width: min(30rem, 82vw);
+}
+
+.complete-canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 50%;
+  background: var(--bg-sunken);
+  box-shadow: var(--loom-ring);
+}
+
+.complete-caption {
+  margin: 1rem 0 0;
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-style: italic;
+  letter-spacing: 0.03em;
+}
+
+/* Toggle + the two download actions (T7) — wraps on narrow viewports. */
+.complete-actions {
+  margin-top: 1.35rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+/* Stats block (T10): framed between two hairlines — the plaque under the
+ * portrait. Hero length first, then the run detail, then the assumption. */
+.complete-stats {
+  margin: 1.9rem auto 0;
+  max-width: 34rem;
+  padding: 1.35rem 0.5rem 1.45rem;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.complete-length {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.complete-length .counter-value {
+  font-size: clamp(2rem, 6.2vw, 3.1rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+}
+
+.complete-length .counter-unit {
+  display: block;
+  margin: 0.2rem 0 0;
+  font-size: 0.95rem;
+}
+
+.complete-detail {
+  margin: 0.6rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------- weave state */
+
+.loom-canvas {
+  width: min(30rem, 82vw);
+  height: auto;
+  aspect-ratio: 1;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 50%;
+  background: var(--bg-sunken);
+  box-shadow: var(--loom-ring);
+}
+
+/* Speed controls work DURING the weave (T4): pause + 0.5×–16× + start over. */
+.weave-controls {
+  margin-top: 1.7rem;
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.weave-button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.speed-group {
+  display: inline-flex;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.speed-button {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--ink-dim);
+  padding: 0.5rem 0.85rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+
+.speed-button + .speed-button {
+  border-left: 1px solid var(--hairline);
+}
+
+/* The pill group clips (overflow:hidden + border-radius), so the global
+ * focus outline would be cut off at its top/bottom edges — pull the ring
+ * inside the button so keyboard focus stays clearly visible (T9). */
+.speed-button:focus-visible {
+  outline-offset: -3px;
+}
+
+.speed-button:hover {
+  color: var(--ink);
+}
+
+.speed-button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 0 14px rgba(201, 162, 95, 0.35);
+}
+
+.speed-button[aria-pressed="true"]:hover {
+  color: var(--on-accent);
+}
+
+/* Live counters (T5, hero of the weave screen in T10): the feet total in
+ * display serif with tabular figures; passes + hairline progress carry the
+ * rest; the phase line gets a live gold pulse while thread is being laid. */
+.weave-counters {
+  margin-top: 1.9rem;
+}
+
+.weave-counters::before {
+  content: "";
+  display: block;
+  width: 46px;
+  height: 1px;
+  margin: 0 auto 1.4rem;
+  background: linear-gradient(90deg, transparent, var(--hairline-strong), transparent);
+}
+
+.counter-feet {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.counter-feet .counter-value {
+  font-size: clamp(2.4rem, 6.5vw, 3.4rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.08;
+  text-shadow: 0 2px 22px rgba(0, 0, 0, 0.55);
+}
+
+.counter-unit {
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+  margin-left: 0.45rem;
+}
+
+.counter-feet .counter-unit {
+  color: var(--accent-ink);
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+}
+
+.counter-passes {
+  margin: 0.5rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-track {
+  margin: 1.25rem auto 0;
+  width: min(18rem, 60vw);
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #a17c3f, var(--accent-ink));
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 140ms linear; /* smooths the 10 Hz DOM updates */
+}
+
+/* Phase line (compute mode, drain, final totals) — the gold dot pulses
+ * only while thread is actively being laid (stats.js sets data-phase);
+ * it disappears on "done". The pulse is decorative → disabled under
+ * prefers-reduced-motion (bottom of file). */
+.weave-status {
+  margin: 1.15rem auto 0;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.weave-status::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 0.5rem;
+  vertical-align: 1px;
+  opacity: 0;
+  transition: opacity var(--t-med) var(--ease);
+}
+
+.weave-status[data-phase="preparing"]::before,
+.weave-status[data-phase="weaving"]::before,
+.weave-status[data-phase="finishing"]::before {
+  opacity: 1;
+}
+
+.weave-status[data-phase="weaving"]::before,
+.weave-status[data-phase="finishing"]::before {
+  animation: thread-pulse 1.7s var(--ease) infinite;
+}
+
+@keyframes thread-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 162, 95, 0.5); }
+  55% { box-shadow: 0 0 0 6px rgba(201, 162, 95, 0); }
+}
+
+/* The one-line honesty note for the rq3 board assumption. */
+.counter-note {
+  margin: 0.6rem auto 0;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+}
+
+/* --------------------------------------------------------------- footer */
+
+.site-footer {
+  padding: 1.4rem 1.25rem 1.6rem;
+  text-align: center;
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+}
+
+.site-footer p { margin: 0; }
+
+/* ------------------------------------- file:// mode + no-JS fallbacks */
+
+.file-notice { display: none; }
+
+.file-mode .file-notice {
+  display: block;
+  margin: 0.4rem auto 0;
+  max-width: 22rem;
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.file-mode .server-only { display: none; }
+.file-mode .drop-zone { cursor: default; }
+
+.file-notice code,
+code {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--accent-ink);
+  background: var(--bg-sunken);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.noscript-note {
+  margin: 0.6rem auto 0;
+  max-width: 20rem;
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+/* ------------------------------------------------- mobile grace (T11) */
+
+/* Touch niceties for phones (the app stays desktop-first — these are the
+ * graceful layer, not a redesign). Tap flashes and the legacy double-tap-zoom
+ * delay are disabled on every interactive control; page scrolling is
+ * unaffected. The crop frame is deliberately NOT listed: it keeps
+ * touch-action:none so circle drags never fight the page scroll. */
+.drop-zone,
+.drop-zone-button,
+.button-primary,
+.weave-button,
+.speed-button,
+.error-dismiss,
+.knob-advanced summary,
+.knob-auto,
+.knob-range {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Coarse pointers get comfortable hit areas (~44px+ targets, a bigger slider
+ * thumb). Pointer-fine devices (desktop/trackpad) keep the exact T10 layout. */
+@media (pointer: coarse) {
+  .drop-zone-button,
+  .weave-button,
+  .error-dismiss {
+    padding: 0.8rem 1.45rem;
+  }
+
+  .button-primary {
+    padding: 0.85rem 1.85rem;
+  }
+
+  .speed-button {
+    padding: 0.75rem 0.95rem;
+  }
+
+  .knob-advanced summary {
+    padding: 0.45rem 0;
+  }
+
+  .knob-auto {
+    padding: 0.4rem 0;
+  }
+
+  .knob-range {
+    height: 30px;
+  }
+
+  .knob-range::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+    margin-top: -9.5px; /* re-center on the 3px track */
+  }
+
+  .knob-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* ------------------------------------------------------ reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
