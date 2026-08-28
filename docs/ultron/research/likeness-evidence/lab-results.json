@@ -1,0 +1,308 @@
+{
+  "kappa255": 112.96,
+  "randomChordMean": 380.7,
+  "runs": [
+    {
+      "label": "portrait / shipped (opaque, sum)",
+      "corr": 0.082,
+      "mae255": 160.6,
+      "maeComp255": 160.7,
+      "passes": 4000,
+      "stop": "budget",
+      "feet": 7053,
+      "wovenPct": 98.5,
+      "eyeMinusCheek": 0,
+      "eyeContrastRatio": null,
+      "mouthMinusCheek": 0,
+      "mouthContrastRatio": 0,
+      "hairMinusBg": 0.004,
+      "hairContrastRatio": -0.01,
+      "chordMean": 529,
+      "chordP10": 475,
+      "chordP50": 558,
+      "chordP90": 595,
+      "image": "portrait",
+      "alpha": 1,
+      "weaveMs": 523,
+      "renderMs": 712
+    },
+    {
+      "image": "portrait",
+      "label": "portrait / model view",
+      "corr": 0.9964,
+      "mae255": 1.1
+    },
+    {
+      "label": "graded / shipped (opaque, sum)",
+      "corr": 0.2666,
+      "mae255": 105.6,
+      "maeComp255": 105.8,
+      "passes": 4000,
+      "stop": "budget",
+      "feet": 6441,
+      "wovenPct": 90.3,
+      "discs": [
+        {
+          "disc": 0.867,
+          "ring": 0.972,
+          "sep": -0.105,
+          "targetSep": 0.16
+        },
+        {
+          "disc": 0.928,
+          "ring": 1,
+          "sep": -0.072,
+          "targetSep": 0.36
+        },
+        {
+          "disc": 0.928,
+          "ring": 1,
+          "sep": -0.072,
+          "targetSep": 0.56
+        },
+        {
+          "disc": 0.73,
+          "ring": 0.889,
+          "sep": -0.159,
+          "targetSep": 0.76
+        }
+      ],
+      "tone": {
+        "slope": 0.593,
+        "r2": 0.434,
+        "curve": [
+          [
+            0.042,
+            0.191
+          ],
+          [
+            0.125,
+            0.646
+          ],
+          [
+            0.208,
+            0.917
+          ],
+          [
+            0.292,
+            0.969
+          ],
+          [
+            0.375,
+            0.986
+          ],
+          [
+            0.458,
+            0.992
+          ],
+          [
+            0.542,
+            0.994
+          ],
+          [
+            0.625,
+            0.994
+          ],
+          [
+            0.708,
+            0.992
+          ],
+          [
+            0.792,
+            0.988
+          ],
+          [
+            0.875,
+            0.947
+          ]
+        ]
+      },
+      "chordMean": 483,
+      "chordP10": 271,
+      "chordP50": 537,
+      "chordP90": 594,
+      "image": "graded",
+      "alpha": 1,
+      "weaveMs": 546,
+      "renderMs": 379
+    },
+    {
+      "image": "graded",
+      "label": "graded / model view",
+      "corr": 0.8945,
+      "mae255": 12.1
+    },
+    {
+      "label": "light / shipped (opaque, sum)",
+      "corr": 0.0809,
+      "mae255": 191.8,
+      "maeComp255": 191.9,
+      "passes": 4000,
+      "stop": "budget",
+      "feet": 6769,
+      "wovenPct": 99.7,
+      "eyeMinusCheek": 0,
+      "eyeContrastRatio": null,
+      "mouthMinusCheek": 0,
+      "mouthContrastRatio": 0,
+      "hairMinusBg": 0.005,
+      "hairContrastRatio": -0.01,
+      "chordMean": 508,
+      "chordP10": 237,
+      "chordP50": 558,
+      "chordP90": 595,
+      "image": "light",
+      "alpha": 1,
+      "weaveMs": 537,
+      "renderMs": 712
+    },
+    {
+      "image": "light",
+      "label": "light / model view",
+      "corr": 0.9996,
+      "mae255": 0.1
+    },
+    {
+      "label": "portrait / WINNER",
+      "corr": 0.7894,
+      "mae255": 34.1,
+      "maeComp255": 31.9,
+      "passes": 4000,
+      "stop": "budget",
+      "feet": 7326,
+      "wovenPct": 68.1,
+      "eyeMinusCheek": 0.235,
+      "eyeContrastRatio": null,
+      "mouthMinusCheek": 0.079,
+      "mouthContrastRatio": -0.17,
+      "hairMinusBg": 0.406,
+      "hairContrastRatio": -0.56,
+      "chordMean": 549,
+      "chordP10": 500,
+      "chordP50": 553,
+      "chordP90": 591,
+      "image": "portrait",
+      "alpha": 0.0496,
+      "weaveMs": 541,
+      "renderMs": 958
+    },
+    {
+      "label": "graded / WINNER",
+      "corr": 0.9302,
+      "mae255": 59.4,
+      "maeComp255": 70.8,
+      "passes": 4000,
+      "stop": "budget",
+      "feet": 5642,
+      "wovenPct": 36.7,
+      "discs": [
+        {
+          "disc": 0.521,
+          "ring": 0.48,
+          "sep": 0.041,
+          "targetSep": 0.16
+        },
+        {
+          "disc": 0.384,
+          "ring": 0.338,
+          "sep": 0.046,
+          "targetSep": 0.36
+        },
+        {
+          "disc": 0.176,
+          "ring": 0.115,
+          "sep": 0.061,
+          "targetSep": 0.56
+        },
+        {
+          "disc": 0.058,
+          "ring": 0,
+          "sep": 0.058,
+          "targetSep": 0.76
+        }
+      ],
+      "tone": {
+        "slope": 0.784,
+        "r2": 0.926,
+        "curve": [
+          [
+            0.042,
+            0.001
+          ],
+          [
+            0.125,
+            0
+          ],
+          [
+            0.208,
+            0
+          ],
+          [
+            0.292,
+            0.002
+          ],
+          [
+            0.375,
+            0.057
+          ],
+          [
+            0.458,
+            0.175
+          ],
+          [
+            0.542,
+            0.285
+          ],
+          [
+            0.625,
+            0.377
+          ],
+          [
+            0.708,
+            0.456
+          ],
+          [
+            0.792,
+            0.526
+          ],
+          [
+            0.875,
+            0.549
+          ]
+        ]
+      },
+      "chordMean": 423,
+      "chordP10": 184,
+      "chordP50": 463,
+      "chordP90": 590,
+      "image": "graded",
+      "alpha": 0.0496,
+      "weaveMs": 568,
+      "renderMs": 468
+    },
+    {
+      "label": "light / WINNER",
+      "corr": 0.7817,
+      "mae255": 41,
+      "maeComp255": 32.9,
+      "passes": 4000,
+      "stop": "budget",
+      "feet": 7313,
+      "wovenPct": 88.2,
+      "eyeMinusCheek": 0.295,
+      "eyeContrastRatio": null,
+      "mouthMinusCheek": 0.153,
+      "mouthContrastRatio": -0.46,
+      "hairMinusBg": 0.337,
+      "hairContrastRatio": -0.64,
+      "chordMean": 548,
+      "chordP10": 493,
+      "chordP50": 556,
+      "chordP90": 592,
+      "image": "light",
+      "alpha": 0.0496,
+      "weaveMs": 759,
+      "renderMs": 955
+    }
+  ]
+}

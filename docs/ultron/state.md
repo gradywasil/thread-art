@@ -38,7 +38,11 @@
 - 2026-08-27 T12 auto-approved (ultron-supreme) — evidence: production-log.md — PRODUCTION COMPLETE (T1–T12 all completed)
 
 ## Open decisions
-- None open. Deferred/follow-up items live in the per-task production-log.md entries.
+- 2026-08-28 FL-1 (post-run likeness defect fix): coordinator ratification pending — defaults now
+  mean chord scoring + Darkness 8/255 with renderer-matched thread ink (alpha 0.7·δ/κ, κ=110.76/255
+  real-Chrome-measured); determinism hashes intentionally changed. Evidence + A/B ranking:
+  production-log.md FL-1 entry + docs/ultron/research/likeness-evidence/.
+- 2026-08-28 FL-1 likeness fix auto-approved (ultron-supreme) — evidence: production-log.md (FL-1 verifier entry, re-dispatch after attempt-1 tool glitch)
 
 ## Next action
 User tries the delivered app (from project root: python3 -m http.server → http://localhost:8000). The run closes on user acceptance per the ultron-supreme completion rule.

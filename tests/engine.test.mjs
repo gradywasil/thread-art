@@ -76,7 +76,9 @@ function uniformLuma(size, value) {
 
 // Oracle for one greedy pass: mirrors the committed rule (ascending
 // candidates, strict > ⇒ lowest pin index wins ties) against the tables.
-function oraclePass(darkness, tables, cur, skip) {
+// scoreNorm mirrors the engine's FL-1 normalization ("mean" divides the
+// summed darkness by the chord's pixel count).
+function oraclePass(darkness, tables, cur, skip, scoreNorm = "mean") {
   const n = tables.pinCount;
   let bestJ = -1;
   let bestSum = -Infinity;
@@ -90,8 +92,9 @@ function oraclePass(darkness, tables, cur, skip) {
     const e = tables.offsets[id + 1];
     let sum = 0;
     for (let k = s; k < e; k++) sum += darkness[tables.pixels[k]];
-    if (sum > bestSum) {
-      bestSum = sum;
+    const score = scoreNorm === "mean" ? sum / (e - s) : sum;
+    if (score > bestSum) {
+      bestSum = score;
       bestJ = j;
       bestS = s;
       bestE = e;
@@ -144,16 +147,17 @@ function spikePortraitLuma() {
 test("config: RQ2 defaults + knob ranges exported", () => {
   assert.deepEqual(ENGINE_KNOBS.pinCount, { min: 200, max: 500, default: 300, label: "Pins" });
   assert.deepEqual(ENGINE_KNOBS.maxPasses, { min: 1000, max: 8000, default: 4000, label: "Coverage (passes)" });
-  assert.deepEqual(ENGINE_KNOBS.lighteningDelta255, { min: 4, max: 32, default: 20, label: "Darkness (0–255 scale)" });
+  assert.deepEqual(ENGINE_KNOBS.lighteningDelta255, { min: 4, max: 32, default: 8, label: "Darkness (0–255 scale)" });
   assert.deepEqual(ENGINE_KNOBS.neighborSkip, { min: 0, max: 25, default: "auto", label: "Min chord gap (pins)" });
   assert.deepEqual(DEFAULT_ENGINE_CONFIG, {
     pinCount: 300,
     maxPasses: 4000,
-    lighteningDelta: 20 / 255,
+    lighteningDelta: 8 / 255,
     neighborSkip: "auto",
     minImprovement: 0,
     convergenceFails: 3,
     startPin: 0,
+    scoreNorm: "mean",
   });
   assert.ok(Object.isFrozen(DEFAULT_ENGINE_CONFIG));
 });
@@ -166,15 +170,18 @@ test("config: resolveConfig — auto skip resolution, overrides, idempotence", (
   assert.equal(base.pinCount, 300);
   assert.equal(base.maxPasses, 4000);
   assert.equal(base.neighborSkip, 10); // "auto" resolved
-  assert.equal(base.lighteningDelta, 20 / 255);
+  assert.equal(base.lighteningDelta, 8 / 255);
   assert.equal(base.minImprovement, 0);
   assert.equal(base.convergenceFails, 3);
+  assert.equal(base.scoreNorm, "mean"); // FL-1 default: length-normalized chords
   assert.ok(Object.isFrozen(base));
 
-  const over = resolveConfig({ pinCount: 200, maxPasses: 8000, lighteningDelta: 4 / 255, neighborSkip: 25, startPin: 5 });
+  const over = resolveConfig({ pinCount: 200, maxPasses: 8000, lighteningDelta: 4 / 255, neighborSkip: 25, startPin: 5, scoreNorm: "sum" });
   assert.equal(over.neighborSkip, 25); // explicit value passes through
   assert.equal(over.startPin, 5);
+  assert.equal(over.scoreNorm, "sum");
   assert.deepEqual(resolveConfig(over), over); // idempotent on resolved configs
+  assert.throws(() => resolveConfig({ scoreNorm: "median" }), RangeError);
 });
 
 test("config: resolveConfig rejects degenerate values", () => {
@@ -335,7 +342,13 @@ test("greedy: delta applied exactly once per covered pixel per pass, clamped at 
     for (let i = 0; i < init.length; i++) init[i] = Math.fround(1 - luma[i]);
     const first = oraclePass(init, tables, 0, 2);
     assert.equal(r.records[0].toPin, first.bestJ, "chosen pin equals oracle argmax");
-    assert.equal(r.records[0].toPin, 12, "longest chord from pin 0 is the opposite pin");
+    // Mean scoring on a UNIFORM image: every candidate ties at the same mean,
+    // so the lowest eligible pin wins (pin 3 at skip 2) — not the opposite
+    // pin that raw sum scoring picked (sum favors the longest chord).
+    assert.equal(r.records[0].toPin, 3, "uniform tie under mean scoring goes to the lowest eligible pin");
+    // The same run under "sum" recovers the old behavior (opposite pin 12):
+    const rSum = weave(luma, { pinCount: 24, maxPasses: 1, neighborSkip: 2, lighteningDelta: delta, scoreNorm: "sum" }, tables);
+    assert.equal(rSum.records[0].toPin, 12, "sum scoring still prefers the longest chord");
     const expected = new Float32Array(init);
     oracleSubtract(expected, tables, first.bestS, first.bestE, delta);
     assert.deepEqual([...r.state.darkness], [...expected]);
@@ -386,7 +399,7 @@ test("greedy: full-run replay exactness (records + tables reproduce the final st
     const id = chordId(rec.fromPin, rec.toPin, 48);
     const s = tables.offsets[id];
     const e = tables.offsets[id + 1];
-    remaining += oracleSubtract(replay, tables, s, e, 20 / 255);
+    remaining += oracleSubtract(replay, tables, s, e, r.config.lighteningDelta);
     totalChordPx += e - s;
     const dx = tables.pinPx[rec.toPin * 2] - tables.pinPx[rec.fromPin * 2];
     const dy = tables.pinPx[rec.toPin * 2 + 1] - tables.pinPx[rec.fromPin * 2 + 1];

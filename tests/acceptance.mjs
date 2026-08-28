@@ -629,7 +629,7 @@ const TRIPWIRE_EVAL = `(async () => {
     return { m, n };
   })();
   const configs = [
-    { name: "defaults", cfg: { pinCount: pins, maxPasses: 4000, lighteningDelta: 20 / 255, neighborSkip: "auto" } },
+    { name: "defaults", cfg: { pinCount: pins, maxPasses: 4000, lighteningDelta: 8 / 255, neighborSkip: "auto" } },
     { name: "tripwire", cfg: { pinCount: pins, maxPasses: 5000, lighteningDelta: 24 / 255, neighborSkip: "auto" } },
   ];
   const out = [];
@@ -639,7 +639,9 @@ const TRIPWIRE_EVAL = `(async () => {
     const c = document.createElement("canvas");
     c.width = d; c.height = d;
     const renderer = render.createWeaveRenderer(c);
-    renderer.init(d, pins);
+    // FL-1: matched ink — the scratch render's thread alpha follows the
+    // config's delta exactly like the app's loom does.
+    renderer.init(d, pins, { threadAlpha: render.threadAlphaForDelta255(cfg.lighteningDelta * 255) });
     renderer.replay(r.seq);
     const data = c.getContext("2d").getImageData(0, 0, d, d).data;
     let err = 0;
@@ -729,8 +731,8 @@ console.log("baseline frames:", JSON.stringify(ev.baseline));
 await upload(A.cdp, FIX.portrait);
 const knobsDefault = await A.cdp.evaluate(`window.__threadArtDebug.knobs`);
 check(
-  "defaults are RQ2 knobs (300/4000/20/auto)",
-  knobsDefault.pinCount === 300 && knobsDefault.maxPasses === 4000 && knobsDefault.lighteningDelta255 === 20 && String(knobsDefault.neighborSkip).startsWith("auto"),
+  "defaults are RQ2 knobs with the FL-1 delta (300/4000/8/auto)",
+  knobsDefault.pinCount === 300 && knobsDefault.maxPasses === 4000 && knobsDefault.lighteningDelta255 === 8 && String(knobsDefault.neighborSkip).startsWith("auto"),
   JSON.stringify(knobsDefault)
 );
 note("settings", `knob defaults: ${JSON.stringify(knobsDefault)}`);
@@ -895,7 +897,7 @@ await snapshotCanvas(A.cdp, "run2", "#complete-canvas");
     if (!m || Number(m[1]) !== i + 1 || Number(m[2]) !== seqPairs[i * 2] || Number(m[3]) !== seqPairs[i * 2 + 1]) seqOk = false;
   }
   const headerFeet = Number((dl.txt.match(/Thread length: ([\d,]+) ft \(([\d,]+) m\)/) || [])[1]?.replace(/,/g, ""));
-  check("criterion 7: txt winding ≡ drawn sequence, header ≡ stats", seqOk && headerFeet === displayed && dl.txt.includes(`Pins: 300`) && dl.txt.includes(`Darkness: 20 / 255`), `${winding.length} lines ≡ ${snapA2.passesUsed} emitted passes · header ft ${headerFeet} ≡ counter ${displayed} · bytes ${dl.txt.length}`);
+  check("criterion 7: txt winding ≡ drawn sequence, header ≡ stats", seqOk && headerFeet === displayed && dl.txt.includes(`Pins: 300`) && dl.txt.includes(`Darkness: 8 / 255`), `${winding.length} lines ≡ ${snapA2.passesUsed} emitted passes · header ft ${headerFeet} ≡ counter ${displayed} · bytes ${dl.txt.length} chars`);
   note("c7", `PNG ${dl.png.bytes} B diff 0 · txt ${dl.txt.length} chars, winding order verified against the emitted sequence · board/thread/spool header lines present: ${dl.txt.includes("Assumes a 24 in") && dl.txt.includes("polyester") && dl.txt.includes("wrap at pins")}`);
   ev.txtA = dl.txt;
   await sleep(150); // the app revokes object URLs on the next macrotask
@@ -999,7 +1001,7 @@ const trip = await A.cdp.evaluate(TRIPWIRE_EVAL, { awaitPromise: true, timeoutMs
   check(
     "rq2 tripwire evaluated (light image, engine A/B)",
     Number.isFinite(def.modelMeanError) && Number.isFinite(tw.modelMeanError),
-    `defaults (20/255, 4000): model ${def.modelMeanError} (${def.modelMeanErrorPer255}/255) · rendered ${def.renderedMeanError255}/255 · ${def.passesUsed} passes (${def.stopReason}) || tripwire (24/255, 5000): model ${tw.modelMeanError} (${tw.modelMeanErrorPer255}/255) · rendered ${tw.renderedMeanError255}/255 · ${tw.passesUsed} passes (${tw.stopReason})`
+    `defaults (8/255, 4000): model ${def.modelMeanError} (${def.modelMeanErrorPer255}/255) · rendered ${def.renderedMeanError255}/255 · ${def.passesUsed} passes (${def.stopReason}) || tripwire (24/255, 5000): model ${tw.modelMeanError} (${tw.modelMeanErrorPer255}/255) · rendered ${tw.renderedMeanError255}/255 · ${tw.passesUsed} passes (${tw.stopReason})`
   );
   note(
     "c6-tripwire",

@@ -29,7 +29,7 @@ ticks up every foot of string used.
 |---|---|---|
 | Pins | 300 | 200–500 |
 | Coverage (threads) | 4,000 | 1,000–8,000 |
-| Darkness (per-thread ink) | 20 | 4–32 |
+| Darkness (per-thread ink) | 8 | 4–32 |
 
 During the weave: pause, 0.5×–16× speed. `prefers-reduced-motion` gets an
 instant stepped finish instead of the ~67 s animation.

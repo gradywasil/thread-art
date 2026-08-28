@@ -3219,3 +3219,187 @@ on purpose (do not delete): `docs/ultron/` incl. `research/` (process record,
   as known-deviation #10 so the shipped record matches reality. All
   previously ratified deviations verified honored. plan.md T12 status set
   to completed; approval line appended to state.md.
+
+---
+
+## FL-1 — Post-run defect fix: likeness of real portraits (acceptance criterion 5) · FIXED, evidence attached
+
+- Date: 2026-08-27/28
+- Worker: production worker subagent (ZCode, GLM-5.3), dispatched by ultron-supreme
+  (post-run user defect report: generated art "doesn't resemble the images in the
+  slightest").
+- Status: diagnosed → fixed → proven. Determinism hashes change as expected
+  (algorithm change); every regression gate re-run green.
+
+### Diagnosis (likeness lab: docs/ultron/research/spikes/likeness/lab.mjs)
+
+Three deterministic synthetic targets at working res 600 (portrait-like face with
+hair mass / mid-tone skin / dark eyes+brows+mouth on light ground; a graded ramp
+with darkness discs; a washed light portrait) × a software Canvas2D stand-in
+renderer (1 px capsule strokes, box-filter AA, same paper/thread luma as the app)
+validated against real headless-Chrome rasterization (calibrate.mjs: per-crossing
+mean drop over the Bresenham footprint κ_real = 110.76/255 vs software 113.0/255;
+17-point k-crossing decay curves agree within 4.82/255 max).
+
+Defect reproduced objectively (shipped defaults, real-app code via proof.mjs):
+- MODEL thinks it nailed the target: corr 0.996, MAE 1.1/255, 98.5% woven.
+- RENDER is destroyed: corr 0.082, MAE 160.6/255, eye−cheek 0.000, mouth−cheek
+  0.000, hair−bg 0.004 — a collapsed black disk (vision-model read of the woven
+  PNG agrees). Root cause: the opaque 1 px stroke darkens ~111/255 per crossing
+  (5.6× the engine's 20/255 model delta), so ~2 crossings saturate a pixel to
+  thread-black while the model keeps claiming 97–98.5% accuracy — exactly the
+  T8 model-vs-render gap (2.5% vs ~146/255) and T12 verifier deviation #10
+  (eyes 17.9 vs ring 17.9).
+- Long-chord bias confirmed: chosen-chord mean 529 px vs 4R/π random-pair mean
+  380.7 px (+39%, p90 595 ≈ diameter) — T5's observation, now measured at 600 px.
+
+### A/B ranking (same metrics per suspect; full data in likeness-evidence/lab-results.json)
+
+1. (b) MATCHED INK — dominant. mean-only on opaque ink: corr 0.080 (no effect —
+   saturation dominates). matched ink alone (sum scoring, d20): portrait corr
+   0.082 → 0.645, eye−cheek 0 → 0.207, MAE 160.6 → 94.1.
+2. (a) MEAN-NORMALIZED SCORING — real but secondary: on top of matched ink,
+   corr 0.645 → 0.664 (portrait) and 0.773 → 0.842 (graded); mouth/eye contrast
+   up; thread use down ~4%. sqrt-length (p=0.5) between. Note: mean scoring does
+   NOT shorten the bulk chords (μ549 at the winner — dark-hugging long chords are
+   legitimate); its gain is letting short feature chords compete.
+3. (c) DELTA × PASSES SWEEP (matched ink, mean scoring): lower delta strictly
+   better at fixed budget; 8000 passes over-inks light images (MAE 78–103) and
+   4000 wins the balance. Winner delta 8/255 · 4000 passes.
+4. Ink-strength factor k (regional band compensation): k=0.7 beats k=1 (corr
+   0.747 → 0.789 portrait, 0.906 → 0.930 graded); k≥1.25 monotonically worse.
+   Calibration: alpha = 0.7·(delta/255)/κ with κ measured on real Chrome.
+5. (d) BLURRED TARGET (σ1–2 px): no measurable effect (corr/MAE unchanged to 3
+   decimals). NOT adopted.
+6. (e) neighborSkip 5 vs 10: no measurable effect. NOT changed.
+7. Deeper model↔render alignments tested and REJECTED by measurement: exact
+   exponential signed-residual engine (corr 0.743–0.755, converges early with
+   hair unfinished) and exponential-clamped subtraction (0.66–0.73); analytic
+   log-lift of the darkness target (eye−cheek 0.40 best but portrait corr drops
+   to 0.60 — midtone starvation). The simple constant-subtract engine with
+   matched ink + mean scoring wins.
+
+### Fix (winning combination)
+
+- `src/engine.js`: chord scoring length-normalized by default
+  (`scoreNorm: "mean"` config field, `"sum"` preserved and tested — the original
+  behavior); default `lighteningDelta` 20/255 → **8/255**. Knob ranges unchanged
+  (4–32 covers 8). Subtraction semantics, stopping rules, determinism, tie-break,
+  worker/fallback identity all untouched.
+- `src/render.js`: FL-1 matched ink — threads stroked at calibrated alpha
+  `threadAlphaForDelta255(delta) = 0.7·(delta/255)/(110.76/255)` (exported
+  THREAD_INK constants; measured against real Chrome). Animation portions use
+  BUTT caps so collinear partial strokes tile without double-inking; full
+  segments/replay keep ROUND caps; the completion replay remains the canonical
+  final canvas (pure function of the sequence). `init(d, pins, {threadAlpha})`.
+- `src/main.js`: loom thread alpha follows the darkness knob (renderer.init
+  receives threadAlphaForDelta255(knob) — the knob now maps linearly to visible
+  per-crossing darkening).
+- `index.html` + `README.md`: Darkness default copy 20 → 8. Feet figure
+  unchanged in substance (winner 7,326 ft at 600 px lab / 7,409 ft on the
+  harness fixture — "roughly 7,000 ft" still accurate).
+- `src/anim.js`/`src/knobs.js`: comment accuracy only.
+
+### Proof (before → after, REAL app code, lab portrait target; proof.mjs)
+
+| metric (portrait) | before (HEAD) | after (FL-1) |
+|---|---|---|
+| Pearson corr vs target | 0.0821 | **0.784** |
+| MAE | 160.6/255 | **34.5/255** |
+| eye−cheek darkness | 0.000 | **0.237** |
+| mouth−cheek darkness | 0.000 | **0.080** |
+| hair−bg darkness | 0.004 | **0.408** |
+| thread alpha | 1 (opaque) | 0.0506 (matched) |
+
+Lab targets (software renderer, same winner config): portrait 0.082→0.789 corr /
+160.6→34.1 MAE; graded 0.267→0.930 / 105.6→59.4; light portrait 0.081→0.782 /
+191.8→41.0. Human-viewable evidence (tracked, small PNGs):
+`docs/ultron/research/likeness-evidence/` — realapp-before-after.png (target |
+before | after from the real renderer), proof-{before,after}-woven.png +
+metrics JSONs, portrait/graded/light-before-after.png (lab renderer),
+calibration.json, lab-results.json. Vision-model review of the composite: hair
+silhouette reproduced, eyes/brows/mouth discernible, background lighter than the
+figure — "resembles the left portrait, unlike the middle" (remaining weaknesses:
+soft features, compressed mid-tone range, slight dark fringe — inherent to 1 px
+thread weaving at 4,000 passes). The app's own canonical (very dark) harness
+fixture: rendered error 111 → 77.55/255 and structure now visible in the harness
+screenshot (was the deviation-#10 collapsed disk).
+
+### Regression gates (all green, this session)
+
+- `node tests/engine.test.mjs`: **23/23 PASS** (defaults literals + oracle
+  updated for mean scoring; new A/B assertion: uniform tie under "mean" → lowest
+  eligible pin, under "sum" → opposite pin; replay-exactness test now reads the
+  resolved delta). Perf smoke: greedy loop 710 ms at defaults (+38% vs sum
+  scoring — the per-candidate normalize multiply), seq hash now `feff806f`
+  (was 1266e3e5; printed, not asserted — EXPECTED algorithm change).
+- `node tests/acceptance.mjs` FULL: **31/31 PASS** — canonical journey seq hash
+  `d11620d0`, final-canvas FNV 450:589bb4f6, worker ≡ fallback, txt/PNG ≡ canvas,
+  feet 7,409 ≡ independent 7,409.39, 1× weave 66.8 s (criterion 3 band kept:
+  passes default unchanged), TTFT ≤ 263 ms, zero longtasks during weaving, zero
+  console errors, cross-path txt byte-identical. Updated gates: defaults check
+  now 300/4000/**8**/auto; txt header expects `Darkness: 8 / 255`; tripwire A/B
+  literals updated (defaults 8/255 · 4000) and its scratch render now applies
+  the config-matched thread alpha (same paint path as the loom).
+- Tripwire rejection STILL HOLDS under matched ink (re-measured): on the light
+  fixture, 24/255·5000 renders 46.06 → 93.49/255 i.e. WORSE at +14% thread.
+  T8's rejection conclusion is superseded in mechanism (it compared opaque-ink
+  renders) but unchanged in outcome.
+- Determinism: cross-speed/cross-path/cross-mode identity re-proven by the
+  harness; the canonical hash CHANGES (d11620d0 vs 99ca01b8 pre-FL-1) — expected
+  for an algorithm change, noted here for future harness runs. No test
+  hard-coded the old hash (both suites compute it dynamically); the only
+  hard-coded canonical values updated are listed above.
+
+### Deviations / notes
+
+- The engine's subtraction stays constant-delta (RQ2's committed semantic);
+  FL-1 changes the DEFAULT value (20→8) and the score normalization (sum→mean),
+  both config fields validated in resolveConfig and covered by unit tests.
+- The likeness lab is disposable research tooling under
+  docs/ultron/research/spikes/likeness/ (lab.mjs, calibrate.mjs, proof.mjs —
+  zero deps, Node ≥ 22 + headless Chrome via raw-WebSocket CDP, same patterns
+  as tests/acceptance.mjs). Evidence PNGs are tracked on purpose.
+- Known limits (measured, accepted): dark-region tone ceiling ~0.75–0.8
+  (exponential ink tail), slight mid-tone compression, rim fringe. The knob set
+  covers retuning (higher Darkness / Coverage for very dark images; the harness
+  fixture at 49.8% woven benefits from it).
+- Supersedes in part: T12 known-deviation #10's "do-not-fix" framing (its cause
+  is now fixed; the canonical dark fixture still weaves soft features at
+  defaults — see limits above).
+
+### Delegation record
+- Dispatched by: ultron-supreme coordinator (post-run defect fix FL-1).
+- Executed by: production worker subagent (ZCode, GLM-5.3).
+- Artifacts touched: src/engine.js, src/render.js, src/main.js, src/anim.js,
+  src/knobs.js, index.html, README.md, tests/engine.test.mjs,
+  tests/acceptance.mjs (edits); docs/ultron/research/spikes/likeness/{lab,
+  calibrate,proof}.mjs + docs/ultron/research/likeness-evidence/* (new);
+  plan.md FL-1 index line; state.md open-decisions line; this entry.
+  Nothing committed — working tree left for the coordinator.
+
+## FL-1 VERIFIER — independent re-verification · PASS (auto-approve recommended)
+
+- Date: 2026-08-28. Verifier: production verifier subagent (re-dispatch after attempt-1
+  tool glitch; fresh process, no reuse of worker numbers).
+- Gates re-run fresh: `node tests/engine.test.mjs` **23/23 PASS** (perf smoke 738.5 ms,
+  seq hash feff806f). `node tests/acceptance.mjs` **31/31 PASS × 2 independent runs**
+  — canonical seq hash `d11620d0` identical across both runs, final-canvas FNV
+  450:589bb4f6 both, worker ≡ fallback (seq + canvas + byte-identical txt), PNG ≡
+  canvas, 1× weave 66.8 s, TTFT ≤ 120.4 ms, zero console errors, zero in-weave
+  longtasks, tripwire rejection still holds (46.06 → 93.49/255 rendered at +14% thread).
+- Likeness proof re-run on this tree (spikes/likeness/proof.mjs, verifier prefix):
+  **corr 0.784, MAE 34.5/255, eye−cheek 0.237**, mouth−cheek 0.080, hair−bg 0.408,
+  alpha 0.0506, 4000/4000 passes — matches the worker's table exactly and clears all
+  three thresholds (≥0.7 / ≤60 / ≥0.15). Scratch verifier PNG/JSON deleted after read.
+- Visual check of likeness-evidence/realapp-before-after.png (vision model, fresh):
+  BEFORE = collapsed near-black disk, no features; AFTER = hair silhouette, eyes/
+  brows and mouth discernible, background lighter than figure — resembles the target.
+  Noted artifacts: soft features, compressed mid-tones, dark rim fringe (known/accepted
+  limits, already documented in the FL-1 entry).
+- Consistency sweep: DEFAULT_ENGINE_CONFIG lighteningDelta 8/255, scoreNorm "mean";
+  knob range 4–32 covers 8 (engine.js, index.html slider min/max, README table all "8");
+  UI copy "8 / 255 · calibrated default"; txt header `Darkness: ${config}/255` dynamic;
+  no stale 20-defaults found in user-visible surfaces or headers; no new user-facing
+  features (only copy/calibration changes).
+- Verdict: FL-1 verified — APPROVED. All worker headline claims reproduced.

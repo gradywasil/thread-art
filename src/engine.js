@@ -45,22 +45,31 @@
 // weaving params (RQ1 finding D3) — so T4 may cache them across reweaves;
 // changing neighborSkip / delta / passes never invalidates a table.
 //
-// ── Greedy loop (committed RQ2 defaults) ───────────────────────────────
+// ── Greedy loop (RQ2 defaults, FL-1 revision) ──────────────────────────
 // From the current pin, evaluate every candidate pin whose CYCLIC distance
 // exceeds neighborSkip (k nearest pins excluded in BOTH directions). Score =
-// Σ darkness over the chord's pixel list (f64 accumulation in a fixed order —
-// deterministic by construction). Pick the maximum with the explicit
-// tie-break (RQ1 finding D2): candidates are scanned in ascending pin index
-// and only a STRICTLY greater sum replaces the incumbent, i.e. the LOWEST
-// pin index wins ties. Subtract lighteningDelta from each covered pixel
-// EXACTLY ONCE per pass (this Bresenham never revisits a pixel), clamped at
-// 0. Emit the pass record (fromPin, toPin); continue from toPin.
+// Σ darkness over the chord's pixel list, LENGTH-NORMALIZED by the FL-1
+// default scoreNorm "mean" (score = Σ / pixelCount; "sum" keeps the original
+// RQ2 behavior) — f64 accumulation in a fixed order, deterministic by
+// construction. Sum scoring measurably biases the greedy toward near-
+// diametric chords (+39% mean length vs the 4R/π random-pair mean, likeness
+// lab); mean scoring lets short feature-crossing chords compete. Pick the
+// maximum with the explicit tie-break (RQ1 finding D2): candidates are
+// scanned in ascending pin index and only a STRICTLY greater score replaces
+// the incumbent, i.e. the LOWEST pin index wins ties. Subtract
+// lighteningDelta from each covered pixel EXACTLY ONCE per pass (this
+// Bresenham never revisits a pixel), clamped at 0. Emit the pass record
+// (fromPin, toPin); continue from toPin.
 //
-// ── Domain translation (RQ2 → this engine) ─────────────────────────────
-// RQ2 states the delta on the 0–255 byte scale (default 20, UI knob 4–32).
-// This engine's darkness domain is the 0..1 luma scale, so delta = knob/255
-// (20/255 = 0.0784313725…). minImprovement stays in summed-darkness units of
-// the 0..1 domain (default 0 ⇒ a pass fails when nothing reachable is left).
+// ── Domain translation (RQ2 → this engine, FL-1 delta revision) ────────
+// RQ2 states the delta on the 0–255 byte scale (UI knob 4–32). The shipped
+// default is 8 (FL-1: matched to the renderer's per-crossing ink — see
+// src/render.js — so the optimized pattern and the displayed canvas agree;
+// the original default 20 saturated the display's tone range). This engine's
+// darkness domain is the 0..1 luma scale, so delta = knob/255 (8/255 =
+// 0.0313725…). minImprovement stays in summed-darkness units of the 0..1
+// domain when scoreNorm is "sum", mean-darkness units when "mean" (default 0
+// ⇒ a pass fails when nothing reachable is left either way).
 //
 // ── Stopping rules (committed RQ2) ─────────────────────────────────────
 // maxPasses counts EMITTED passes (threads drawn), not failed attempts. A
@@ -82,28 +91,32 @@
 
 export const TWO_PI = 2 * Math.PI;
 
-// UI knob ranges (RQ2 §7). The engine itself only sanity-checks inputs; the
-// UI (T5) clamps to these. lighteningDelta255 is the 0–255-scale knob whose
-// engine value is knob/255; neighborSkip default "auto" resolves to
-// Math.max(1, round(pinCount / 30)) (= 10 at 300 pins).
+// UI knob ranges (RQ2 §7; delta default revised by FL-1). The engine itself
+// only sanity-checks inputs; the UI (T5) clamps to these. lighteningDelta255
+// is the 0–255-scale knob whose engine value is knob/255; neighborSkip
+// default "auto" resolves to Math.max(1, round(pinCount / 30)) (= 10 at 300
+// pins).
 export const ENGINE_KNOBS = Object.freeze({
   pinCount: Object.freeze({ min: 200, max: 500, default: 300, label: "Pins" }),
   maxPasses: Object.freeze({ min: 1000, max: 8000, default: 4000, label: "Coverage (passes)" }),
-  lighteningDelta255: Object.freeze({ min: 4, max: 32, default: 20, label: "Darkness (0–255 scale)" }),
+  lighteningDelta255: Object.freeze({ min: 4, max: 32, default: 8, label: "Darkness (0–255 scale)" }),
   neighborSkip: Object.freeze({ min: 0, max: 25, default: "auto", label: "Min chord gap (pins)" }),
 });
 
-// Default config — single source of truth (RQ2 §4, verbatim field set,
-// lighteningDelta translated to the 0..1 darkness domain, plus the
-// engine-level startPin which is NOT a UI knob).
+// Default config — single source of truth (RQ2 §4 field set, lighteningDelta
+// translated to the 0..1 darkness domain, plus the engine-level startPin and
+// scoreNorm which are NOT UI knobs). FL-1: lighteningDelta 20 → 8/255 and
+// chord scoring sum → mean (measured in the likeness lab,
+// docs/ultron/research/spikes/likeness/lab.mjs).
 export const DEFAULT_ENGINE_CONFIG = Object.freeze({
   pinCount: 300,
   maxPasses: 4000,
-  lighteningDelta: 20 / 255,
+  lighteningDelta: 8 / 255,
   neighborSkip: "auto",
   minImprovement: 0,
   convergenceFails: 3,
   startPin: 0,
+  scoreNorm: "mean",
 });
 
 // neighborSkip "auto": k nearest pins excluded both directions (RQ2).
@@ -190,6 +203,11 @@ export function resolveConfig(overrides = {}) {
     throw new RangeError(`startPin must be < pinCount ${pinCount} (got ${startPin})`);
   }
 
+  const scoreNorm = raw.scoreNorm;
+  if (scoreNorm !== "sum" && scoreNorm !== "mean") {
+    throw new RangeError(`scoreNorm must be "sum" or "mean" (got ${scoreNorm})`);
+  }
+
   return Object.freeze({
     pinCount,
     maxPasses,
@@ -198,6 +216,7 @@ export function resolveConfig(overrides = {}) {
     minImprovement,
     convergenceFails,
     startPin,
+    scoreNorm,
   });
 }
 
@@ -364,8 +383,20 @@ export function weavePasses(state, tables, toPass, out) {
   const skip = cfg.neighborSkip;
   const delta = cfg.lighteningDelta;
   const minImp = cfg.minImprovement;
-  const { pixels, offsets, pinPx } = tables;
+  const { pixels, offsets, pinPx, nChords } = tables;
   const darkness = state.darkness;
+
+  // FL-1 chord-score normalization: "mean" divides each chord's summed
+  // darkness by its pixel count (precomputed once per call — deterministic
+  // f64); "sum" leaves the raw sum (the original RQ2 behavior). Only the
+  // SCORE is normalized — the subtraction below is unchanged.
+  const norm = cfg.scoreNorm === "mean" ? new Float64Array(nChords) : null;
+  if (norm) {
+    for (let k = 0; k < nChords; k++) {
+      const len = offsets[k + 1] - offsets[k];
+      norm[k] = len > 0 ? 1 / len : 0;
+    }
+  }
 
   let cur = state.currentPin;
   let written = 0;
@@ -393,8 +424,9 @@ export function weavePasses(state, tables, toPass, out) {
       const e = offsets[id + 1];
       let sum = 0;
       for (let k = s; k < e; k++) sum += darkness[pixels[k]];
-      if (sum > bestSum) {
-        bestSum = sum;
+      const score = norm ? sum * norm[id] : sum;
+      if (score > bestSum) {
+        bestSum = score;
         bestJ = j;
         bestS = s;
         bestE = e;

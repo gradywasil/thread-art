@@ -1,0 +1,20 @@
+{
+  "tree": "thread-art-before",
+  "defaults": {
+    "delta255": 20,
+    "scoreNorm": "sum(pre-FL-1)",
+    "passes": 4000
+  },
+  "passesUsed": 4000,
+  "seqHash": "8a5fa0fc",
+  "corr": 0.0821,
+  "mae255": 160.6,
+  "eyeMinusCheek": 0,
+  "mouthMinusCheek": 0,
+  "hairMinusBg": 0.004,
+  "chordMean": 529,
+  "randomChordMean": 380.7,
+  "feet": 7053,
+  "wovenPct": 98.5,
+  "threadAlpha": 1
+}

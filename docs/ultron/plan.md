@@ -210,6 +210,8 @@ Accessibility · DevOps(static). No backend lane.
 10. T10 polish ← T6 ∥ T8 ∥ T9
 11. T11 mobile ← T10
 12. T12 deploy + final sweep ← T8–T11
+13. Post-run fix FL-1 likeness defect (matched ink + mean scoring, delta 20→8) ← post-T12
+    user report · completed-pending-verification — evidence: production-log.md FL-1 entry
 
 ## Milestones
 - M1 — "It accepts a portrait" (T1+T2): upload, EXIF-safe, draggable circle. Exposes crop UX

@@ -3,7 +3,7 @@
 // Owns the crop stage's settings region: the three committed pre-start knobs
 //   • Pins            200–500   (default 300, step 10)
 //   • Coverage        1000–8000 passes (default 4,000, step 100)
-//   • Darkness        4–32 on the 0–255 scale (default 20, step 1)
+//   • Darkness        4–32 on the 0–255 scale (default 8, step 1; FL-1)
 // plus the optional ADVANCED min-chord-gap control (0–25 pins, default
 // "auto" = max(1, round(pinCount / 30)) — the RQ2 resolution, = 10 at 300
 // pins). The gap is folded into a collapsed <details> so the showpiece

@@ -29,12 +29,15 @@
 // brief staged steps on a plain setTimeout cadence (~1 s for a default
 // 4,000-pass weave instead of the ~67 s animation) — an instant/stepped
 // finish that honors prefers-reduced-motion. Only the PRESENTATION changes:
-// the same passes are drawn in the same order (full opaque segments, so
-// stepping over a partially-drawn segment is idempotent), the counters
-// accumulate the identical chords, and the final canvas comes from the
-// completion replay either way — the sequence and every stat are bit-
-// identical to an animated run. The media query is watched by main.js and
-// forwarded live, so a mid-weave change swaps modes on the next tick.
+// the same passes are drawn in the same order, the counters accumulate the
+// identical chords, and the final canvas comes from the completion replay
+// either way — the sequence and every stat are bit-identical to an animated
+// run. (FL-1 note: thread ink is translucent, so a stepped drain finishing
+// a partially-drawn segment transiently double-inks that one segment's tail;
+// the one-shot completion replay repaints every segment exactly once from
+// scratch, which is why the FINAL canvas stays a pure function of the
+// sequence.) The media query is watched by main.js and forwarded live, so a
+// mid-weave change swaps modes on the next tick.
 
 // 1× = one thread per frame at 60 fps (display-only; RQ2 committed range).
 export const BASE_PASSES_PER_SECOND = 60;

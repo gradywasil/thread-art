@@ -23,7 +23,7 @@ import { prepareWorkingImage, emitCropOutput } from "./ingest.js";
 import { createCropController } from "./crop.js";
 import { hashSequence } from "./engine.js";
 import { createWeaveScheduler } from "./compute.js";
-import { createWeaveRenderer } from "./render.js";
+import { createWeaveRenderer, threadAlphaForDelta255 } from "./render.js";
 import { createWeaveAnimation, SPEED_STEPS } from "./anim.js";
 import { createLiveCounters, formatGrouped } from "./stats.js";
 import { createKnobController } from "./knobs.js";
@@ -345,7 +345,12 @@ function beginWeaveRun(output) {
   const startedAt = performance.now();
 
   const renderer = createWeaveRenderer(el.loomCanvas);
-  renderer.init(output.diameter, config.pinCount); // fresh paper — no stale ink
+  // FL-1: the thread ink follows the darkness knob — each laid thread
+  // darkens its path by the amount the engine's model subtracted, so the
+  // optimized pattern and the displayed canvas agree (see src/render.js).
+  renderer.init(output.diameter, config.pinCount, {
+    threadAlpha: threadAlphaForDelta255(k.lighteningDelta255),
+  }); // fresh paper — no stale ink
   counters.begin({
     diameterPx: output.diameter, // the rq3 virtual board (display-time scale)
     pinCount: config.pinCount,

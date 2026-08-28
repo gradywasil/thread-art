@@ -1,0 +1,20 @@
+{
+  "tree": "thread-art",
+  "defaults": {
+    "delta255": 8,
+    "scoreNorm": "mean",
+    "passes": 4000
+  },
+  "passesUsed": 4000,
+  "seqHash": "cf75cb61",
+  "corr": 0.784,
+  "mae255": 34.5,
+  "eyeMinusCheek": 0.237,
+  "mouthMinusCheek": 0.08,
+  "hairMinusBg": 0.408,
+  "chordMean": 549.5,
+  "randomChordMean": 380.7,
+  "feet": 7326,
+  "wovenPct": 68.1,
+  "threadAlpha": 0.0506
+}
