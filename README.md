@@ -4,7 +4,7 @@ Upload a portrait. Watch a single black thread weave itself around 300 pins,
 burning the image into the canvas one greedy decision at a time — while a counter
 ticks up every foot of string used.
 
-**Live:** https://arrangedgodly.github.io/thread-art/
+**Live:** https://thread.arrangedgodly.com/
 
 ## What it does
 
