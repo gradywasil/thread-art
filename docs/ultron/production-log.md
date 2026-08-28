@@ -3403,3 +3403,119 @@ screenshot (was the deviation-#10 collapsed disk).
   no stale 20-defaults found in user-visible surfaces or headers; no new user-facing
   features (only copy/calibration changes).
 - Verdict: FL-1 verified — APPROVED. All worker headline claims reproduced.
+
+---
+
+## FL-1 — verifier entry #2 (independent validation, incl. per-crossing ink) · PASS
+
+- Date: 2026-08-28. Verifier: second production VERIFIER subagent (independent
+  of the FL-1 worker and of the entry above; dispatched with an explicit
+  contract item the prior entry lacked — an independent measurement of the
+  renderer's per-crossing ink κ). Method: own harnesses in /tmp/fl1v (outside
+  the project). Own raw-WebSocket CDP client, own PRNGs (xorshift32 seed
+  0xC0FFEE, LCG 987654321 — different family/seeds from the project's
+  mulberry32), own pin math, own 8-connected Bresenham, own Rec.709 luma,
+  own portrait generator, own console/exception capture. Node v24.8.0,
+  headless Chrome 151.0.7922.174, darwin arm64.
+- Result: **PASS — all contract criteria (a)–(g) met.** Corroborates and
+  extends the entry above; no contradictions.
+
+### (a) Per-crossing ink, measured on the current uncommitted code
+
+- My pin math (θi = i/n·2π, r = floor(s/2)−2, rounded) vs engine
+  buildTables pinPx: **0/600 mismatches**.
+- κ (opaque stroke, mean luma drop over MY Bresenham footprint, 48 chords at
+  assorted angles, 3-px endpoint trim): **106.29/255 vs claimed 110.76 →
+  −4.0%** — the calibration anchor reproduces.
+- Default alpha: threadAlphaForDelta255(8) = **0.05055976886962801 = exactly
+  0.7·(8/110.76)** (code ≡ calibration.json).
+- Rendered ink per crossing at defaults: footprint mean drop **5.37/255 vs
+  the calibrated target κ·α = 5.60 = 0.7·δ → −4.1%** — the coded
+  calibration relation is confirmed by my own pixels.
+- Honesty notes: footprint ink is 0.67·δ BY DESIGN (the documented 0.7
+  regional factor); touched-band mean 6.02/255 (0.75·δ); per-chord ink varies
+  ~3.6–12/255 with angle (AA coverage) — κ averages this out. A
+  high-coverage chord's first-crossing drop measured 7.3/255 vs the model's
+  linear 8 (−9%). k-decay: matches the linear model at k=1 (232.9 vs 232.2),
+  runs lighter at high k (exponential tail = the documented tone ceiling).
+  The pre-FL-1 defect (κ 110.76 vs δ 20 → ~2 crossings saturate) is gone.
+  My full-lab rerun re-confirms 0.7 is the measured optimum: portrait corr
+  k0.7 0.7894 > k1 0.7626 > k1.25 0.7374 > k1.5 0.7106 (monotonically worse
+  for k ≥ 1.25, as logged).
+
+### (b) Lab + real-app proof, my own executions
+
+- `node lab.mjs` full (all stages): **portrait WINNER corr 0.7894 · MAE
+  34.1/255 · eye−cheek 0.235 · mouth−cheek 0.079 · hair−bg 0.406 · 7,326
+  ft**; graded 0.930/59.4; light 0.782/41.0 — headline gates PASS (corr ≥
+  0.7, MAE ≤ 60, eye−cheek ≥ 0.15); every A/B number cited in the worker
+  entry reproduces (defect repro 0.082/160.6 while the model believed
+  0.9964/1.1; matched-ink only 0.6446; +mean 0.6642; graded 0.773→0.842).
+- My copy of proof.mjs (output redirected to /tmp) on the real engine+render
+  in headless Chrome: reproduces proof-after-metrics.json **field-for-field**
+  — seqHash cf75cb61, **corr 0.784 · MAE 34.5 · eye−cheek 0.237 ·
+  mouth−cheek 0.080 · hair−bg 0.408 · feet 7,326 · alpha 0.0506**, defaults
+  8/mean/4000.
+
+### (c) Visual review
+
+- realapp-before-after.png reviewed whole AND the AFTER panel cropped +
+  upscaled: hair YES (afro-like silhouette as in target), brows YES, eyes
+  YES (clearly darker than cheeks), mouth YES (faint, correctly positioned
+  lower third), nose PARTIAL (regional shading), cheeks lighter than hair/
+  eyes YES, background lightest YES, portrait layout correct. MIDDLE panel =
+  the collapsed disk (defect reproduced visually). Accepted artifacts
+  confirmed: thin rim fringe, compressed mid-tones, soft features.
+
+### (d) Gates fresh (this verifier's own runs)
+
+- engine.test.mjs ×2: **23/23 both**, perf seq hash `feff806f` identical.
+- acceptance.mjs FULL ×2: **31/31 both, 0 FAIL lines**; cross-run internal
+  consistency: seq `d11620d0` both, final-canvas FNV `450:589bb4f6` both,
+  1× weave 66.8 s both, worker ≡ fallback (seq + canvas + byte-identical
+  txt), post-readback reweave identical, **feet 7,409 ≡ independent
+  recomputation 7,409.39** (±1 ft floor), defaults gate 300/4000/8/auto,
+  txt-header gate `Darkness: 8 / 255` PASS, tripwire still rejected
+  (46.06 → 93.49/255 at +14% thread), zero console errors in all four
+  sessions.
+
+### (e) Defaults consistency
+
+- engine.js 8/255 + "mean"; knobs 4–32 default 8 (covers); index.html slider
+  min=4/max=32/value=8, label "8 / 255", hint "8 is the calibrated default";
+  knobs.js KNOB_DEFAULTS derives from DEFAULT_ENGINE_CONFIG; README table
+  "8 | 4–32"; "roughly 7,000 ft" re-measured honest (7,326 lab / 7,409
+  fixture / 6,978 my journey portrait); txt header dynamic; the only
+  "20/255" left in app code is render.js's historical defect comment.
+
+### (f) Scope + served run
+
+- Diffs reviewed: anim.js/knobs.js comment-only; main.js 2-hunk alpha wiring;
+  index.html 6 lines copy; README 2 lines; render.js matched ink; engine.js
+  mean scoring + default; tests updated. **No new user-facing features.**
+- My own served journey (real file-picker path → Start → 16× → complete):
+  **zero console errors, exceptions, warnings, or Log-entry errors**; feet
+  6,978 displayed; completion reached.
+
+### (g) Tree
+
+- Both commits predate FL-1 (21:51/21:54 vs FL-1 work 23:xx); nothing
+  committed; modified = app + docs + tests as listed by the worker;
+  untracked = the two research dirs only.
+
+### Housekeeping disclosure
+
+- My two-stage lab invocation briefly overwrote
+  likeness-evidence/lab-results.json (the tracked file held only the last
+  invocation's runs — lab.mjs rewrites the file per invocation); I re-ran
+  the FULL lab and left a complete deterministic 161-run lab-results.json
+  (strictly fuller evidence; every cited number reproduces), and removed the
+  6 incidental look-*.png panels the full run wrote (not part of the
+  worker's evidence set). The *-before-after/*-target evidence PNGs were
+  regenerated deterministically by the same tool.
+
+### Verdict
+
+- **PASS. No unmet criteria.** state.md's approval line (already present from
+  the prior verifier dispatch) is accurate; not duplicated. plan.md statuses
+  untouched per the post-run-fix rule.
