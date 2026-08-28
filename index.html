@@ -87,8 +87,10 @@
         <canvas id="crop-canvas" class="crop-canvas" width="1" height="1" role="img"
                 aria-label="Uploaded photo with a circular crop region"></canvas>
         <div class="crop-circle" id="crop-circle" tabindex="0" role="group"
-             aria-label="Crop circle — drag it with mouse or touch, or press the arrow keys to nudge it"></div>
+             aria-label="Crop circle — drag it with mouse, pen or touch, or press the arrow keys to nudge it"></div>
       </div>
+
+      <p class="crop-keys" id="crop-keys">arrow keys nudge · Shift steps farther · Home recenters</p>
 
       <p class="crop-meta" id="crop-meta"></p>
 
@@ -150,7 +152,7 @@
                      aria-describedby="knob-gap-hint">
               <label class="knob-auto"><input type="checkbox" id="knob-gap-auto" checked> Auto</label>
             </div>
-            <p class="knob-hint" id="knob-gap-hint">skips the k nearest pins in both directions (auto = pin count ÷ 30)</p>
+            <p class="knob-hint" id="knob-gap-hint">skips the nearest pins on either side of the current one (auto = pin count ÷ 30)</p>
           </div>
         </details>
       </div>
@@ -167,7 +169,7 @@
       <div class="weave-controls">
         <button type="button" class="weave-button" id="weave-pause" aria-pressed="false">Pause</button>
         <div class="speed-group" id="weave-speeds" role="group" aria-label="Weave speed multiplier"></div>
-        <button type="button" class="weave-button" id="weave-restart">Start over</button>
+        <button type="button" class="weave-button" id="weave-restart">Stop the weave</button>
       </div>
 
       <div class="weave-counters" id="weave-counters">

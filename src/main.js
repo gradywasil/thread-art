@@ -66,6 +66,7 @@ const el = {
   downloadPng: document.getElementById("download-png"),
   downloadSeq: document.getElementById("download-seq"),
   loomCanvas: document.getElementById("loom-canvas"),
+  completeStage: document.getElementById("stage-complete"),
   weaveHeading: document.getElementById("weave-heading"),
   completeHeading: document.getElementById("complete-heading"),
   weavePause: document.getElementById("weave-pause"),
@@ -84,6 +85,7 @@ const ERROR_TITLES = {
   empty: "That file is empty",
   unsupported: "That’s not a JPG, PNG or WebP",
   "too-large": "That image is too large",
+  "too-small": "That image is too small",
   unreadable: "That image can’t be read",
 };
 
@@ -237,12 +239,20 @@ function showStage(name) {
   }
 }
 
-function showError(title, message) {
+function showError(title, message, { dismissLabel = "Try another image", action = "pick" } = {}) {
   el.errorTitle.textContent = title;
   el.errorMessage.textContent = message;
+  el.errorDismiss.textContent = dismissLabel;
+  errorAction = action;
   el.errorRegion.hidden = false;
   el.errorDismiss.focus();
 }
+
+// What the error card's button does: "pick" reopens the file picker (upload
+// errors), "settings" returns to the crop-stage controls (weave errors —
+// same image + settings would fail identically, so the honest recovery is
+// adjusting them, not re-picking).
+let errorAction = "pick";
 
 function clearError() {
   el.errorRegion.hidden = true;
@@ -278,22 +288,51 @@ async function handleFileList(fileList) {
 
   setBusy(true);
   // T1 validation (readable-file check) — its <img> decode only proves the
-  // file decodes; the ingest pipeline re-decodes the File itself.
+  // file decodes; the ingest pipeline re-decodes the File itself. The
+  // result's own reason/message reach the card (empty / unsupported /
+  // too-large all have specific copy in ./upload.js).
   const result = await readImageFile(file);
-  if (result.ok) {
-    releaseImage(result);
-    const prepared = await prepareWorkingImage(file, el.cropCanvas);
-    if (prepared.ok) {
-      enterCropStage(file, prepared);
-      setBusy(false);
-      return;
-    }
+  if (!result.ok) {
+    setBusy(false);
+    showError(ERROR_TITLES[result.reason] || ERROR_TITLES.unreadable, result.message);
+    return;
+  }
+  releaseImage(result);
+
+  // The paste listener is global, so a new image can arrive mid-weave — but
+  // only a VALID one earns the teardown: tear the active run down here,
+  // synchronously after all awaits and BEFORE the crop canvas is redrawn.
+  // (Earlier would kill the weave for a file that fails anyway; later would
+  // let a late completion hijack the new journey and pair the old weave with
+  // the new image's "original" view. A completion that fires during the
+  // decode above is self-consistent — the canvas still holds the old image.)
+  const interruptedWeave = Boolean(weave);
+  if (interruptedWeave) {
+    endWeaveRun();
+    completion.reset();
+  }
+
+  const prepared = await prepareWorkingImage(file, el.cropCanvas);
+  if (prepared.ok) {
+    enterCropStage(file, prepared);
+    setBusy(false);
+    return;
   }
   setBusy(false);
-  showError(
-    ERROR_TITLES.unreadable,
-    "It looks like an image, but the browser can’t decode it — the file may be corrupted or mislabeled."
-  );
+  if (prepared.reason === "too-small") {
+    showError(
+      ERROR_TITLES["too-small"],
+      "After resizing for the loom, its short side comes out under 16 px — too small to seat the ring of pins. Try a larger photo."
+    );
+  } else {
+    showError(
+      ERROR_TITLES.unreadable,
+      "It looks like an image, but the browser can’t decode it — the file may be corrupted or mislabeled."
+    );
+  }
+  // A mid-weave paste that fails ingest has already torn the run down: the
+  // old photo is still on the crop canvas, so return there to recover from.
+  if (interruptedWeave && crop.isOpen) showStage("crop");
 }
 
 function enterCropStage(file, prepared) {
@@ -301,7 +340,7 @@ function enterCropStage(file, prepared) {
   const circle = crop.getCircle();
   el.cropMeta.textContent =
     `${file && file.name ? file.name : "Pasted image"} · ` +
-    `weaving at ${prepared.width} × ${prepared.height} px · crop ⌀ ${circle.d} px`;
+    `working at ${prepared.width} × ${prepared.height} px · crop ⌀ ${circle.d} px`;
   showStage("crop");
   el.startButton.focus({ preventScroll: true });
 }
@@ -428,6 +467,7 @@ function beginWeaveRun(output) {
 
   showStage("weave");
   resetWeaveControls();
+  el.downloadSeq.disabled = false; // re-evaluated at completion (0-thread runs have no sequence)
   // Stage-change focus management (T9): the Start button that triggered the
   // weave is now hidden — move focus to the weave heading so keyboard and
   // screen-reader users land in the new stage, not on <body>.
@@ -482,6 +522,15 @@ function weaveComplete() {
     },
   });
   showStage("complete");
+  // The finished-piece moment: restart the one-shot bloom/rise so a reweave
+  // earns it again (remove → forced reflow → add).
+  el.completeStage.classList.remove("just-woven");
+  void el.completeStage.offsetWidth;
+  el.completeStage.classList.add("just-woven");
+  // A 0-thread run (blank image, converged before the first pass) has no
+  // winding order to export — the txt button must say so by being disabled,
+  // not by no-op-ing. The PNG stays live: the paper portrait is real.
+  el.downloadSeq.disabled = !(run.seq && run.seq.length >= 2);
   // Focus lands on the completion heading (T9): the weave-stage control
   // that had focus (if any) is hidden with its stage — the "Woven" heading
   // announces the new state and Tab continues into its actions from the top.
@@ -493,7 +542,8 @@ function weaveFailed(message) {
   completion.reset(); // a failed reweave must not leave the last portrait around
   showError(
     "The weave couldn’t run",
-    `Something went wrong while computing the thread pattern: ${message}`
+    `Something went wrong while computing the thread pattern: ${message}`,
+    { dismissLabel: "Adjust settings", action: "settings" }
   );
   showStage("crop");
 }
@@ -588,6 +638,16 @@ function resetWeaveControls() {
   setSpeedSelection(1);
   el.weavePause.textContent = "Pause";
   el.weavePause.setAttribute("aria-pressed", "false");
+  el.weaveStatus.dataset.paused = "false";
+  disarmStopButton();
+}
+
+// Arm-then-fire state for the mid-weave stop button (see wireWeaveControls).
+let stopArmTimer = 0;
+function disarmStopButton() {
+  clearTimeout(stopArmTimer);
+  delete el.weaveRestart.dataset.armed;
+  el.weaveRestart.textContent = "Stop the weave";
 }
 
 function wireWeaveControls() {
@@ -613,17 +673,36 @@ function wireWeaveControls() {
       weave.anim.resume();
       el.weavePause.textContent = "Pause";
       el.weavePause.setAttribute("aria-pressed", "false");
+      el.weaveStatus.dataset.paused = "false";
+      counters.setPaused(false);
     } else {
       weave.anim.pause();
       el.weavePause.textContent = "Resume";
       el.weavePause.setAttribute("aria-pressed", "true");
+      el.weaveStatus.dataset.paused = "true"; // the dot holds steady — no pulse while paused
+      counters.setPaused(true);
     }
   });
 
-  // Mid-weave restart: cancel compute + animation, return to the crop stage.
-  // The next Start rebuilds everything from a clean slate (fresh paper,
-  // fresh scheduler run id — no stale state can survive).
+  // Mid-weave stop is arm-then-fire: the run is minutes of the product, and a
+  // thumb reaching for the speed group shouldn't end it on one touch. First
+  // press arms (label asks the question, gold state), second press within
+  // the window stops; the arm decays on its own.
   el.weaveRestart.addEventListener("click", () => {
+    if (!weave) {
+      // No active run (late click) — behave like the plain stage return.
+      showStage("crop");
+      el.startButton.focus({ preventScroll: true });
+      return;
+    }
+    if (el.weaveRestart.dataset.armed !== "true") {
+      el.weaveRestart.dataset.armed = "true";
+      el.weaveRestart.textContent = "Stop the weave?";
+      clearTimeout(stopArmTimer);
+      stopArmTimer = setTimeout(disarmStopButton, 2600);
+      return;
+    }
+    disarmStopButton();
     endWeaveRun();
     showStage("crop");
     el.startButton.focus({ preventScroll: true });
@@ -638,6 +717,7 @@ function wireUpload() {
   el.pickButton.addEventListener("click", () => el.fileInput.click());
   el.dropZone.addEventListener("click", (event) => {
     if (event.target.closest("button")) return; // the button handles itself
+    if (state.reading) return; // a read is in flight — don't open a second picker
     el.fileInput.click();
   });
   el.fileInput.addEventListener("change", () => {
@@ -646,7 +726,11 @@ function wireUpload() {
   });
   el.errorDismiss.addEventListener("click", () => {
     clearError();
-    el.fileInput.click();
+    if (errorAction === "settings") {
+      el.startButton.focus({ preventScroll: true });
+      return;
+    }
+    if (!state.reading) el.fileInput.click();
   });
 
   // Drag and drop. A depth counter keeps the highlight stable while the
@@ -692,6 +776,15 @@ function wireUpload() {
   el.startButton.addEventListener("click", startWeave);
   el.cropReplace.addEventListener("click", backToUploadStage);
 }
+
+// An active weave is minutes of the product: reloading or closing the tab
+// mid-run throws it away silently. The guard is attached once, but only
+// speaks while a run is live (a quiet page never nags on exit).
+window.addEventListener("beforeunload", (event) => {
+  if (!weave) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
 
 showStage("upload");
 wireUpload();

@@ -67,7 +67,10 @@ export async function readImageFile(file) {
   if (!file) return fail("missing", "No file was provided.");
 
   if (file.size === 0) {
-    return fail("empty", "The file has nothing in it — try exporting the image again.");
+    return fail(
+      "empty",
+      "A failed export or download usually leaves a file like this — try exporting the image again."
+    );
   }
   if (!looksLikeImage(file)) {
     return fail(
@@ -78,7 +81,7 @@ export async function readImageFile(file) {
   if (file.size > MAX_BYTES) {
     return fail(
       "too-large",
-      "This image is over 100 MB. Try a smaller export — the weaver works at a low internal resolution anyway."
+      "It’s over the 100 MB limit. Try a smaller export — the weaver works at a low internal resolution anyway."
     );
   }
 

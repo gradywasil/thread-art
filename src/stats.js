@@ -107,6 +107,7 @@ export function createLiveCounters({ feetValue, passesValue, track, fill, status
   let euclidPx = 0; // Σ Euclidean chord px over DRAWN passes (engine-parity)
   let phase = "preparing"; // preparing | weaving | finishing | done
   let mode = null; // "worker" | "fallback"
+  let pausedFlag = false; // pause holds the drain — the status line must say so
   let finalStats = null; // scheduler's onDone stats
   let lastRenderAt = -Infinity;
   let lastAnnouncement = ""; // dedupe — never re-announce identical text
@@ -139,7 +140,12 @@ export function createLiveCounters({ feetValue, passesValue, track, fill, status
     if (!finalStats) return null;
     const feet = finalStats.totalThreadEuclidPx * scaleFt;
     const meters = finalStats.totalThreadEuclidPx * scaleM;
-    const why = finalStats.stopReason === "converged" ? "converged" : "full budget";
+    // Plain-voice stop reasons (one phrasing everywhere — complete.js and
+    // download.js match verbatim): "converged" is optimizer jargon.
+    const why =
+      finalStats.stopReason === "converged"
+        ? "stopped early, with nothing left worth weaving"
+        : "full thread budget";
     return `${formatFeetMeters(feet, meters)} of thread · ${formatGrouped(finalStats.passesUsed)} threads · ${why}`;
   }
 
@@ -147,10 +153,12 @@ export function createLiveCounters({ feetValue, passesValue, track, fill, status
     // Visual only (T10): the phase drives the status line's live gold dot in
     // styles.css. Text content is untouched (announcements/QA read text).
     if (status && status.dataset) status.dataset.phase = phase;
-    if (phase === "preparing") {
+    if (pausedFlag && phase !== "done") {
+      status.textContent = `Paused · ${formatGrouped(drawn)} / ${formatGrouped(totalPasses)} threads`;
+    } else if (phase === "preparing") {
       status.textContent = "Preparing the loom…";
     } else if (phase === "weaving") {
-      status.textContent = `Weaving · ${mode === "worker" ? "worker thread" : "main thread"}`;
+      status.textContent = "Weaving";
     } else if (phase === "finishing") {
       status.textContent = `Finishing — laying the last ${formatGrouped(Math.max(0, totalPasses - drawn))} threads`;
     } else {
@@ -192,15 +200,24 @@ export function createLiveCounters({ feetValue, passesValue, track, fill, status
       finalStats = null;
       lastRenderAt = -Infinity;
       lastMilestone = -1;
+      pausedFlag = false;
       render();
       announceText("Preparing the loom");
+    },
+
+    // Pause holds the drain: the status line states where the weave stands
+    // (truthful — the dot stops pulsing in CSS), announced once politely.
+    setPaused(flag) {
+      pausedFlag = !!flag;
+      renderStatus();
+      announceText(pausedFlag ? "Paused" : "Resumed");
     },
 
     noteStarted(runMode) {
       mode = runMode;
       if (phase === "preparing") phase = "weaving";
       renderStatus();
-      announceText(`Weaving started · ${mode === "worker" ? "worker thread" : "main thread"}`);
+      announceText("Weaving started");
     },
 
     // One thread fully laid on the loom (from the animation, in emission
@@ -253,6 +270,7 @@ export function createLiveCounters({ feetValue, passesValue, track, fill, status
       drawn = 0;
       euclidPx = 0;
       totalPasses = 0;
+      pausedFlag = false;
       render();
     },
 

@@ -28,6 +28,13 @@
 
 export const WORKING_MAX = 600; // internal working resolution (plan: 500–700 px)
 
+// Hard floor for the working image's short side (= the weave circle's
+// diameter). Below this the pin ring cannot seat (the engine's radius floor
+// degenerates and buildTables/createWeaveState throw), and even the smallest
+// legitimate photo is orders of magnitude above it — a friendly refusal beats
+// an engine error surfacing raw.
+export const MIN_WORKING_SHORT_SIDE = 16;
+
 // Normalization thresholds (RQ4; constants, tuning flagged for T8 evidence).
 export const P_LO = 0.02;
 export const P_HI = 0.98;
@@ -236,6 +243,14 @@ export async function prepareWorkingImage(file, targetCanvas) {
   const scale = Math.min(1, WORKING_MAX / Math.max(sw, sh));
   const tw = Math.max(1, Math.round(sw * scale));
   const th = Math.max(1, Math.round(sh * scale));
+
+  // Degenerate-size guard (extreme slivers/icons/spacers): reject before the
+  // engine ever sees them — a 1–2 px short side dies inside buildTables.
+  if (Math.min(tw, th) < MIN_WORKING_SHORT_SIDE) {
+    if (usedImageElement) releaseImageElement(drawable);
+    else closeBitmap(drawable);
+    return { ok: false, reason: "too-small" };
+  }
 
   targetCanvas.width = tw;
   targetCanvas.height = th;

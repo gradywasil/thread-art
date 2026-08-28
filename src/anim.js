@@ -43,6 +43,12 @@
 export const BASE_PASSES_PER_SECOND = 60;
 export const SPEED_STEPS = [0.5, 1, 2, 4, 8, 16]; // committed RQ2 knob set
 
+// Frame-delta ceiling: rAF freezes while the tab is hidden, and an unclamped
+// `now - lastTime` would lay the entire absence in ONE frame on return (a
+// jump-cut that skips the show). Absence holds the weave instead; ordinary
+// scheduling jitter still catches up (100 ms ≈ 10 missed frames).
+const MAX_FRAME_DT_MS = 100;
+
 // Stepped-finish cadence for reduced motion (T9): the whole drain is split
 // into this many steps, one every REDUCED_STEP_MS (scaled by the speed
 // multiplier so the speed controls keep working in stepped mode).
@@ -179,7 +185,7 @@ export function createWeaveAnimation({
     if (completed) return;
     if (lastFrameStamp) frameDeltas.push(now - lastFrameStamp);
     lastFrameStamp = now;
-    const dt = Math.max(0, now - lastTime);
+    const dt = Math.min(MAX_FRAME_DT_MS, Math.max(0, now - lastTime));
     lastTime = now;
     advance(dt);
     if (drained()) completeIfDrained();

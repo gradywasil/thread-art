@@ -483,6 +483,28 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* Keyboard discovery: focusing the crop ring reveals the nudge keys. The
+ * line reserves its height (opacity only — no layout shift when it appears)
+ * and never shows on touch-primary devices, where there is no keyboard. */
+.crop-keys {
+  margin: 0.5rem 0 0;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  transition: opacity var(--t-med) var(--ease);
+}
+
+.crop-frame:focus-within + .crop-keys {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .crop-keys {
+    display: none;
+  }
+}
+
 .crop-actions {
   margin-top: 1.5rem;
   display: flex;
@@ -698,9 +720,17 @@ body {
     width: fit-content; /* shrinkwrap the photo — the grid column is wider */
   }
 
-  .crop-meta {
+  /* The keyboard-discovery hint takes the row directly under the photo;
+   * the meta line moves down one. */
+  .crop-keys {
     grid-column: 1;
     grid-row: 4;
+    text-align: center;
+  }
+
+  .crop-meta {
+    grid-column: 1;
+    grid-row: 5;
     text-align: center;
   }
 
@@ -751,6 +781,40 @@ body {
   font-size: 0.9rem;
   font-style: italic;
   letter-spacing: 0.03em;
+}
+
+/* The finished-piece moment: the spotlight blooms once over the plinth and
+ * the plaque rises into place — the gallery acknowledging the weave that
+ * just ended. Presentation only (box-shadow/opacity); the canvas pixels and
+ * the downloadable PNG are untouched, and the reduced-motion block at the
+ * bottom stills it entirely. */
+.just-woven .complete-canvas {
+  animation: loom-bloom 900ms var(--ease) both;
+}
+
+@keyframes loom-bloom {
+  0% { box-shadow: var(--loom-ring); }
+  45% {
+    box-shadow:
+      0 0 0 1px var(--hairline-strong),
+      0 0 64px rgba(201, 162, 95, 0.3),
+      0 30px 68px -24px rgba(0, 0, 0, 0.75);
+  }
+  100% { box-shadow: var(--loom-ring); }
+}
+
+.just-woven .complete-caption,
+.just-woven .complete-stats {
+  animation: plaque-rise 500ms var(--ease) both;
+}
+
+.just-woven .complete-stats {
+  animation-delay: 120ms;
+}
+
+@keyframes plaque-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
 }
 
 /* Toggle + the two download actions (T7) — wraps on narrow viewports. */
@@ -823,9 +887,18 @@ body {
   flex-wrap: wrap;
 }
 
-.weave-button[aria-pressed="true"] {
+.weave-button[aria-pressed="true"],
+.weave-button[data-armed="true"] {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* Routine-save certainty: the button confirms with its outcome — border and
+ * tint only, per the Plinth Rule (controls never lift). */
+.weave-button.is-saved {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(201, 162, 95, 0.08);
 }
 
 .speed-group {
@@ -980,6 +1053,13 @@ body {
   animation: thread-pulse 1.7s var(--ease) infinite;
 }
 
+/* Paused is truth: while no thread is being laid, the dot holds steady and
+ * dims instead of pulsing (main.js sets data-paused). */
+.weave-status[data-paused="true"]::before {
+  animation: none;
+  opacity: 0.45;
+}
+
 @keyframes thread-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(201, 162, 95, 0.5); }
   55% { box-shadow: 0 0 0 6px rgba(201, 162, 95, 0); }
@@ -1097,6 +1177,35 @@ code {
   .knob-range::-moz-range-thumb {
     width: 16px;
     height: 16px;
+  }
+}
+
+/* Narrow viewports (≤30rem): the six-segment speed pill is one unsplittable
+ * row — compact it so it never forces horizontal page scroll next to the
+ * pause and restart buttons. Only padding-inline shrinks; the coarse-pointer
+ * vertical hit area above stays untouched. */
+@media (max-width: 30rem) {
+  .speed-button {
+    padding-inline: 0.55rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Short viewports (landscape phones, tiled windows ≤30rem tall): the discs
+ * are sized from width alone, which can exceed the viewport height — add an
+ * svh term so the exhibit stays square AND on screen. Desktop-height windows
+ * never hit this (62svh > 30rem there). */
+@media (max-height: 30rem) {
+  .drop-zone {
+    width: min(24rem, 82vw, 58svh);
+  }
+
+  .loom-canvas {
+    width: min(30rem, 82vw, 58svh);
+  }
+
+  .complete-figure {
+    width: min(30rem, 82vw, 58svh);
   }
 }
 

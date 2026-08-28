@@ -37,9 +37,10 @@ import {
 } from "./stats.js";
 import { autoNeighborSkip } from "./engine.js";
 
-// rq3 txt-header phrasing (single source of truth for T7).
+// rq3 txt-header phrasing (single source of truth for T7). The board line
+// matches stats.js's BOARD_LABEL (0.6096 m → 61 cm — never 60).
 export const BOARD_ASSUMPTION_LINE =
-  "Assumes a 24 in (60 cm) board; length = sum of thread segments × scale.";
+  "Assumes a 24 in (61 cm) board; length = sum of thread segments × scale.";
 export const THREAD_SPEC_LINE =
   "Thread: black polyester sewing thread, ~0.3 mm.";
 export const SPOOL_NOTE_LINE =
@@ -81,7 +82,11 @@ export function buildSequenceText(artwork) {
   const d = artwork.diameterPx;
   const feet = feetFromEuclidPx(artwork.euclidPx, d);
   const meters = metersFromEuclidPx(artwork.euclidPx, d);
-  const why = artwork.stopReason === "converged" ? "converged early" : "full pass budget";
+  // Matches stats.js's finalLine and complete.js's plaque verbatim.
+  const why =
+    artwork.stopReason === "converged"
+      ? "stopped early, with nothing left worth weaving"
+      : "full thread budget";
 
   const lines = [];
   const title = "Thread Art — pin winding order";
@@ -155,6 +160,24 @@ export function createDownloadController({ canvas, pngButton, seqButton, getArtw
     if (log.length > 50) log.shift();
   }
 
+  // Routine-save certainty: the button briefly states the outcome — "Saved" —
+  // so the click is acknowledged in-tab. Label swap + border tint only; the
+  // timer resets on rapid repeat clicks.
+  const savedTimers = new WeakMap();
+  function flashSaved(button) {
+    const label = button.dataset.label || (button.dataset.label = button.textContent);
+    button.textContent = "Saved";
+    button.classList.add("is-saved");
+    clearTimeout(savedTimers.get(button));
+    savedTimers.set(
+      button,
+      setTimeout(() => {
+        button.textContent = label;
+        button.classList.remove("is-saved");
+      }, 1400)
+    );
+  }
+
   pngButton.addEventListener("click", () => {
     const artwork = getArtwork();
     if (!artwork) return;
@@ -166,6 +189,7 @@ export function createDownloadController({ canvas, pngButton, seqButton, getArtw
         bytes: blob ? blob.size : 0,
         at: Math.round(performance.now()),
       });
+      if (blob) flashSaved(pngButton);
     });
   });
 
@@ -182,6 +206,7 @@ export function createDownloadController({ canvas, pngButton, seqButton, getArtw
       threads: artwork.passesUsed,
       at: Math.round(performance.now()),
     });
+    flashSaved(seqButton);
   });
 
   return {

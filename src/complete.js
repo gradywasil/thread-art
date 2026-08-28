@@ -79,7 +79,11 @@ export function createCompleteController({
 
       const feet = feetFromEuclidPx(summary.euclidPx, d);
       const meters = metersFromEuclidPx(summary.euclidPx, d);
-      const why = summary.stopReason === "converged" ? "converged early" : "full pass budget";
+      // Matches stats.js's finalLine and download.js's txt header verbatim.
+      const why =
+        summary.stopReason === "converged"
+          ? "stopped early, with nothing left worth weaving"
+          : "full thread budget";
       lengthValue.textContent = formatFeetMeters(feet, meters);
       detail.textContent =
         `${formatGrouped(summary.pinCount)} pins · ${formatGrouped(summary.passesUsed)} threads · ${why}`;
